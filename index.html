@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#FBF1F0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Ledger Calendar — Household Budget</title>
+<title>Budget Buddy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Lora:ital,wght@0,400;0,500;0,700;1,600&family=Quicksand:wght@500;600;700&family=Nunito:wght@400;600;700&family=Caveat:wght@600;700&family=Patrick+Hand&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
@@ -262,7 +262,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="topbar-row">
-        <div class="brand"><span class="brand-mark" id="brandMark">❀</span> Ledger</div>
+        <div class="brand"><span class="brand-mark" id="brandMark">❀</span> Budget Buddy</div>
         <button class="icon-btn" aria-label="Settings" onclick="showModal('settingsModal')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
       </div>
       <div class="save-status" id="saveStatus"></div>
@@ -477,27 +477,27 @@
     <div class="form-label" style="margin-bottom:8px;">Curated pairings</div>
     <div>
       <div class="font-option" onclick="changeFont('modern')">
-        <div class="font-option-preview" style="font-family:'Space Grotesk',sans-serif;">Ledger</div>
+        <div class="font-option-preview" style="font-family:'Space Grotesk',sans-serif;">Budget</div>
         <div class="font-option-label">Modern</div>
       </div>
       <div class="font-option" onclick="changeFont('elegant')">
-        <div class="font-option-preview" style="font-family:'Playfair Display',serif;">Ledger</div>
+        <div class="font-option-preview" style="font-family:'Playfair Display',serif;">Budget</div>
         <div class="font-option-label">Elegant</div>
       </div>
       <div class="font-option" onclick="changeFont('classic')">
-        <div class="font-option-preview" style="font-family:'Lora',serif;">Ledger</div>
+        <div class="font-option-preview" style="font-family:'Lora',serif;">Budget</div>
         <div class="font-option-label">Classic</div>
       </div>
       <div class="font-option" onclick="changeFont('rounded')">
-        <div class="font-option-preview" style="font-family:'Quicksand',sans-serif;">Ledger</div>
+        <div class="font-option-preview" style="font-family:'Quicksand',sans-serif;">Budget</div>
         <div class="font-option-label">Rounded</div>
       </div>
       <div class="font-option" onclick="changeFont('handwritten')">
-        <div class="font-option-preview" style="font-family:'Caveat',cursive; font-size:26px;">Ledger</div>
+        <div class="font-option-preview" style="font-family:'Caveat',cursive; font-size:26px;">Budget</div>
         <div class="font-option-label">Handwritten</div>
       </div>
       <div class="font-option" onclick="changeFont('typewriter')">
-        <div class="font-option-preview" style="font-family:'Special Elite',monospace; font-size:17px;">Ledger</div>
+        <div class="font-option-preview" style="font-family:'Special Elite',monospace; font-size:17px;">Budget</div>
         <div class="font-option-label">Typewriter</div>
       </div>
     </div>
@@ -610,7 +610,7 @@
     <div class="modal-title">Import JSON</div>
     <div class="form-group">
       <label class="form-label">Paste backup JSON</label>
-      <textarea class="form-input" id="importText" placeholder="Paste the contents of a Ledger JSON export here"></textarea>
+      <textarea class="form-input" id="importText" placeholder="Paste the contents of a Budget JSON export here"></textarea>
     </div>
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="closeModal('importModal')">Cancel</button>
@@ -1701,7 +1701,7 @@ function saveBalanceSettings(){
    EXPORT / IMPORT
    ========================================================= */
 function exportToMarkdown(){
-  let md = `# Ledger Export\n*Generated: ${new Date().toLocaleString()}*\n\n`;
+  let md = `# Budget Export\n*Generated: ${new Date().toLocaleString()}*\n\n`;
   md += `## Monthly summary\n- **Starting balance**: ${money(startingBalance)}\n\n---\n\n`;
   [0, 1].forEach(period => {
     md += `\n## Period ${period + 1}\n\n`;
