@@ -12,6 +12,9 @@
 <link rel="icon" href="icon-192x192.png">
 <link rel="apple-touch-icon" href="icon-192x192.png">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Lora:ital,wght@0,400;0,500;0,700;1,600&family=Quicksand:wght@500;600;700&family=Nunito:wght@400;600;700&family=Caveat:wght@600;700&family=Patrick+Hand&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --font-display:'Space Grotesk', system-ui, sans-serif;
@@ -265,7 +268,7 @@
     <div class="topbar-inner">
       <div class="topbar-row">
         <img src="./icon-192x192.png" alt="" width="60" height="60">
-        <div class="brand"><span class="brand-mark" id="brandMark">❀</span> Ledger </div>
+        <div class="brand"><span class="brand-mark" id="brandMark">❀</span> Ledger</div>
         <button class="icon-btn" aria-label="Settings" onclick="showModal('settingsModal')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
       </div>
       <div class="save-status" id="saveStatus"></div>
@@ -422,6 +425,15 @@
       </div>
     </div>
 
+    <div class="settings-section-label">Sync</div>
+    <div class="settings-list">
+      <div class="settings-row" onclick="openSyncModal()">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg></div>
+        <div class="settings-row-label" id="syncRowLabel">Cloud sync</div>
+        <div class="settings-chevron">›</div>
+      </div>
+    </div>
+
     <div class="settings-section-label">Budget</div>
     <div class="settings-list">
       <div class="settings-row" onclick="openPeriodSettings()">
@@ -470,6 +482,17 @@
       <li onclick="changeTheme('green')">Meadow</li>
       <li onclick="closeModal('themeModal')">Cancel</li>
     </ul>
+  </div>
+</div>
+
+<!-- Cloud sync modal -->
+<div class="modal-overlay" id="syncModal">
+  <div class="modal-box">
+    <div class="modal-title">Cloud sync</div>
+    <div id="syncModalContent"></div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('syncModal')">Close</button>
+    </div>
   </div>
 </div>
 
@@ -668,6 +691,15 @@ const MAX_BG_DIMENSION = 1600;
 const BG_JPEG_QUALITY = 0.82;
 let periodSplitDay = 16;   // period 2 starts on this day
 let startingBalance = 1200;
+
+/* Cloud sync (Firebase) — appearance settings (theme/font/size/background)
+   stay local to each device on purpose; only the shared budget data syncs. */
+let fbApp = null, fbAuth = null, fbDb = null;
+let fbConfig = null;
+let fbUser = null;
+let fbUnsubscribe = null;
+let fbApplyingRemote = false;
+let fbLastSyncedAt = null;
 let selectedIcon = '🧾';
 let selectedCategoryPeriods = [0, 1];
 let editingCategory = null;
@@ -784,6 +816,7 @@ async function persist(){
   }
   try{ localStorage.setItem('ledgerCalendarState', payload); ok = true; }catch(e){ /* ignore */ }
   setSaveStatus(ok ? 'Saved' : "Couldn't save — check connection", true);
+  if (!fbApplyingRemote) pushToCloud();
 }
 
 /* Background image gets its own storage key so a large image isn't
@@ -1670,6 +1703,217 @@ async function saveBackground(){
 }
 
 /* =========================================================
+   CLOUD SYNC (Firebase)
+   Only the shared budget data (categories, transactions,
+   periodSplitDay, startingBalance) syncs between devices.
+   Appearance settings stay local to each device on purpose.
+   ========================================================= */
+function loadFirebaseConfigFromStorage(){
+  try{
+    const raw = localStorage.getItem('ledgerCalendarFirebaseConfig');
+    if (raw) return JSON.parse(raw);
+  }catch(e){ /* ignore */ }
+  return null;
+}
+function saveFirebaseConfigToStorage(cfg){
+  try{ localStorage.setItem('ledgerCalendarFirebaseConfig', JSON.stringify(cfg)); }catch(e){ /* ignore */ }
+}
+function clearFirebaseConfigFromStorage(){
+  try{ localStorage.removeItem('ledgerCalendarFirebaseConfig'); }catch(e){ /* ignore */ }
+}
+function extractBalancedObject(text, fromIndex){
+  const start = text.indexOf('{', fromIndex);
+  if (start === -1) return null;
+  let depth = 0, inString = false, stringChar = '', escaped = false;
+  for (let i = start; i < text.length; i++){
+    const ch = text[i];
+    if (inString){
+      if (escaped){ escaped = false; }
+      else if (ch === '\\'){ escaped = true; }
+      else if (ch === stringChar){ inString = false; }
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`'){ inString = true; stringChar = ch; continue; }
+    if (ch === '{') depth++;
+    else if (ch === '}'){
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+function parseFirebaseConfigInput(text){
+  // Look for "firebaseConfig = { ... }" (or similarly named) first, since a
+  // straight paste of Firebase's setup snippet has other {...} blocks
+  // (the import statements) that a naive first-brace-to-last-brace match
+  // would incorrectly sweep in.
+  let objText = null;
+  const labelMatch = text.match(/(?:firebaseConfig|const\s+\w*[Cc]onfig)\s*=\s*/);
+  if (labelMatch){
+    objText = extractBalancedObject(text, labelMatch.index + labelMatch[0].length);
+  }
+  if (!objText){
+    const apiKeyIdx = text.indexOf('apiKey');
+    if (apiKeyIdx !== -1){
+      const braceIdx = text.lastIndexOf('{', apiKeyIdx);
+      if (braceIdx !== -1) objText = extractBalancedObject(text, braceIdx);
+    }
+  }
+  if (!objText) objText = extractBalancedObject(text, 0);
+  if (!objText) return null;
+  try{ return JSON.parse(objText); }catch(e){ /* fall through */ }
+  try{ return Function('"use strict"; return (' + objText + ')')(); }catch(e2){ return null; }
+}
+
+function connectFirebase(cfg){
+  if (typeof firebase === 'undefined'){
+    alert("Couldn't load the cloud sync library — check your connection and try again.");
+    return false;
+  }
+  try{
+    fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg);
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+    fbConfig = cfg;
+    saveFirebaseConfigToStorage(cfg);
+    fbAuth.onAuthStateChanged(handleAuthStateChanged);
+    return true;
+  }catch(e){
+    console.error(e);
+    return false;
+  }
+}
+function handleAuthStateChanged(user){
+  fbUser = user;
+  if (user) startCloudSync(); else stopCloudSync();
+  renderSyncModalContent();
+  updateSyncRowLabel();
+}
+function updateSyncRowLabel(){
+  const el = document.getElementById('syncRowLabel');
+  if (!el) return;
+  el.textContent = fbUser ? `Cloud sync · ${fbUser.email}` : (fbConfig ? 'Cloud sync · signed out' : 'Cloud sync');
+}
+
+function startCloudSync(){
+  if (!fbDb || !fbUser) return;
+  if (fbUnsubscribe) fbUnsubscribe();
+  fbUnsubscribe = fbDb.collection('budgetApp').doc('sharedState').onSnapshot(handleRemoteSnapshot, (err) => {
+    console.error('Sync error', err);
+  });
+}
+function stopCloudSync(){
+  if (fbUnsubscribe){ fbUnsubscribe(); fbUnsubscribe = null; }
+}
+function handleRemoteSnapshot(snap){
+  if (!snap.exists){
+    pushToCloud(); // nothing shared yet — seed it with this device's current data
+    return;
+  }
+  if (snap.metadata.hasPendingWrites) return; // this is our own write echoing back
+  const data = snap.data();
+  fbApplyingRemote = true;
+  if (data.categories) categories = data.categories;
+  if (data.transactions) transactions = data.transactions;
+  if (typeof data.periodSplitDay === 'number') periodSplitDay = data.periodSplitDay;
+  if (typeof data.startingBalance === 'number') startingBalance = data.startingBalance;
+  fbLastSyncedAt = new Date();
+  persist();
+  fbApplyingRemote = false;
+  render();
+  renderSyncModalContent();
+}
+function pushToCloud(){
+  if (!fbDb || !fbUser || fbApplyingRemote) return;
+  fbDb.collection('budgetApp').doc('sharedState').set({
+    categories, transactions, periodSplitDay, startingBalance,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: fbUser.email
+  }).then(() => {
+    fbLastSyncedAt = new Date();
+    renderSyncModalContent();
+  }).catch(e => console.error('Cloud save failed', e));
+}
+
+function openSyncModal(){
+  closeModal('settingsModal');
+  renderSyncModalContent();
+  showModal('syncModal');
+}
+function renderSyncModalContent(){
+  const el = document.getElementById('syncModalContent');
+  if (!el) return;
+  if (!fbConfig){
+    el.innerHTML = `
+      <div class="form-hint" style="margin-bottom:12px;">Paste the snippet from your project (Project settings → General → Your apps → SDK setup and configuration) — the whole thing is fine, including the &lt;script&gt; tags and imports. We'll pull the config out automatically.</div>
+      <div class="form-group">
+        <textarea class="form-input" id="fbConfigInput" placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "..." }'></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="handleConnectFirebase()">Connect</button>
+    `;
+  } else if (!fbUser){
+    el.innerHTML = `
+      <div class="due-row" style="cursor:default; margin-bottom:14px;">
+        <div class="icon-badge sm">☁️</div>
+        <div class="due-info"><div class="due-name">Connected</div><div class="due-cat">${escHtml(fbConfig.projectId || '')}</div></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="fbEmailInput" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="fbPasswordInput" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" style="width:100%; margin-bottom:8px;" onclick="handleSignIn()">Sign in</button>
+      <button class="btn btn-secondary" style="width:100%;" onclick="handleForgetFirebase()">Forget this project</button>
+    `;
+  } else {
+    const lastSync = fbLastSyncedAt ? fbLastSyncedAt.toLocaleTimeString() : 'just now';
+    el.innerHTML = `
+      <div class="due-row" style="cursor:default; margin-bottom:14px;">
+        <div class="icon-badge sm">✓</div>
+        <div class="due-info"><div class="due-name">Synced as ${escHtml(fbUser.email)}</div><div class="due-cat">Last update: ${escHtml(lastSync)}</div></div>
+      </div>
+      <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="pushToCloud()">Push local data now</button>
+      <button class="btn btn-secondary" style="width:100%;" onclick="handleSignOut()">Sign out</button>
+    `;
+  }
+}
+function handleConnectFirebase(){
+  const raw = document.getElementById('fbConfigInput').value.trim();
+  if (!raw){ alert('Paste your Firebase config first.'); return; }
+  const cfg = parseFirebaseConfigInput(raw);
+  if (!cfg || !cfg.apiKey || !cfg.projectId){
+    alert("That doesn't look like a valid Firebase config. Copy it from Project settings → General → Your apps in the Firebase console.");
+    return;
+  }
+  if (!connectFirebase(cfg)){
+    alert("Couldn't connect. Double-check the config and try again.");
+    return;
+  }
+  renderSyncModalContent();
+}
+function handleSignIn(){
+  const email = document.getElementById('fbEmailInput').value.trim();
+  const password = document.getElementById('fbPasswordInput').value;
+  if (!email || !password){ alert('Enter your email and password.'); return; }
+  fbAuth.signInWithEmailAndPassword(email, password).catch(e => alert('Sign-in failed: ' + e.message));
+}
+function handleSignOut(){
+  if (fbAuth) fbAuth.signOut();
+}
+function handleForgetFirebase(){
+  if (!confirm('Forget this Firebase project on this device? You can reconnect anytime by pasting the config again.')) return;
+  stopCloudSync();
+  if (fbAuth) fbAuth.signOut();
+  fbApp = null; fbAuth = null; fbDb = null; fbConfig = null; fbUser = null;
+  clearFirebaseConfigFromStorage();
+  renderSyncModalContent();
+  updateSyncRowLabel();
+}
+
+/* =========================================================
    PAY PERIOD & STARTING BALANCE SETTINGS
    ========================================================= */
 function openPeriodSettings(){
@@ -1879,6 +2123,8 @@ function handleImportFileSelect(event){
   document.getElementById('addFab').classList.toggle('show', currentScreen === 'calendar');
   render();
   if (!saved) persist();
+  const savedFbConfig = loadFirebaseConfigFromStorage();
+  if (savedFbConfig) connectFirebase(savedFbConfig);
 })();
 </script>
 </body>
