@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#FBF1F0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Ledger Calendar — Household Budget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Lora:ital,wght@0,400;0,500;0,700;1,600&family=Quicksand:wght@500;600;700&family=Nunito:wght@400;600;700&family=Caveat:wght@600;700&family=Patrick+Hand&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --font-display:'Space Grotesk', system-ui, sans-serif;
+    --font-mono:'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+    --font-body:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --radius-sm:9px; --radius-md:14px; --radius-lg:22px;
+  }
+
+  /* ---------- Theme tokens ---------- */
+  [data-theme="light"]{
+    --paper:#F7F4EE; --surface:#FFFFFF; --ink:#23262B; --ink-muted:#6B6F76; --rule:#E1DDD2;
+    --accent:#2B6777; --accent-ink:#FFFFFF; --accent-soft:rgba(43,103,119,0.14);
+    --accent2:#B9834F; --good:#4C7A52; --warn:#C08A2E; --bad:#B0463C;
+    --shadow-card:0 1px 2px rgba(30,25,15,0.04), 0 6px 16px rgba(30,25,15,0.05);
+  }
+  [data-theme="dark"]{
+    --paper:#17191D; --surface:#212327; --ink:#EDEAE3; --ink-muted:#9A9C9F; --rule:#34373D;
+    --accent:#5FA8B8; --accent-ink:#0E1113; --accent-soft:rgba(95,168,184,0.18);
+    --accent2:#DDA463; --good:#71AC79; --warn:#DBAC53; --bad:#DD8A7A;
+    --shadow-card:0 1px 2px rgba(0,0,0,0.3);
+  }
+  [data-theme="blue"]{
+    --paper:#EBF2F6; --surface:#FFFFFF; --ink:#1B2A33; --ink-muted:#5B6C76; --rule:#C9DCE3;
+    --accent:#1D6FA5; --accent-ink:#FFFFFF; --accent-soft:rgba(29,111,165,0.14);
+    --accent2:#C08A4A; --good:#3F8858; --warn:#B98A2E; --bad:#B0463C;
+    --shadow-card:0 1px 2px rgba(20,40,60,0.05), 0 6px 16px rgba(20,40,60,0.06);
+  }
+  [data-theme="green"]{
+    --paper:#EAF2EA; --surface:#FFFFFF; --ink:#1E2A20; --ink-muted:#57685A; --rule:#CFE0CF;
+    --accent:#2E6B4A; --accent-ink:#FFFFFF; --accent-soft:rgba(46,107,74,0.14);
+    --accent2:#B98A3E; --good:#5B9A66; --warn:#BE8B2E; --bad:#B24A3C;
+    --shadow-card:0 1px 2px rgba(20,40,25,0.05), 0 6px 16px rgba(20,40,25,0.06);
+  }
+  [data-theme="rose"]{
+    --paper:#FBF1F0; --surface:#FFFEFC; --ink:#4A2E35; --ink-muted:#9C7A80; --rule:#F0D9DC;
+    --accent:#C6647A; --accent-ink:#FFFFFF; --accent-soft:rgba(198,100,122,0.16);
+    --accent2:#7C9473; --good:#7C9473; --warn:#C99A4E; --bad:#B85C55;
+    --shadow-card:0 1px 2px rgba(120,40,60,0.06), 0 6px 18px rgba(120,40,60,0.08);
+  }
+
+  /* ---------- Font tokens (independent of color theme) ---------- */
+  [data-font="modern"]{ --font-display:'Space Grotesk', system-ui, sans-serif; --font-body:'Space Grotesk', system-ui, sans-serif; }
+  [data-font="elegant"]{ --font-display:'Playfair Display', Georgia, serif; --font-body:'Lora', Georgia, serif; }
+  [data-font="classic"]{ --font-display:'Lora', Georgia, serif; --font-body:'Lora', Georgia, serif; }
+  [data-font="rounded"]{ --font-display:'Quicksand', system-ui, sans-serif; --font-body:'Nunito', system-ui, sans-serif; }
+  [data-font="handwritten"]{ --font-display:'Caveat', cursive; --font-body:'Patrick Hand', cursive; }
+  [data-font="typewriter"]{ --font-display:'Special Elite', 'Courier New', monospace; --font-body:'Courier Prime', 'Courier New', monospace; }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ font-size:16px; }
+  html,body{ height:100%; }
+  body{ font-family:var(--font-body); background:var(--paper); color:var(--ink); transition:background .2s ease, color .2s ease; }
+  @media (prefers-reduced-motion: reduce){ *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; } }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  button, input, select{ font-family:inherit; color:inherit; }
+
+  .app{ min-height:100%; display:flex; flex-direction:column; position:relative; z-index:0; }
+
+  /* ---------- Custom background image ---------- */
+  #bgImageLayer{ position:fixed; inset:0; z-index:-2; background-size:cover; background-position:center; background-repeat:no-repeat; }
+  #bgOverlay{ position:fixed; inset:0; z-index:-1; background:var(--paper); opacity:1; transition:opacity .2s ease, background .2s ease; }
+  body.has-bg .topbar,
+  body.has-bg .tabbar,
+  body.has-bg .modal-box,
+  body.has-bg .ledger-card,
+  body.has-bg .cal-cell:not(.empty),
+  body.has-bg .due-row,
+  body.has-bg .stat-chip,
+  body.has-bg .hero-card{
+    background-color: color-mix(in srgb, var(--surface) 80%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{ position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--rule); }
+  .topbar-inner{ max-width:860px; margin:0 auto; padding:14px 16px 12px; }
+  .topbar-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .brand{ font-family:var(--font-display); font-weight:700; font-size:calc(21/16*1rem); letter-spacing:-0.02em; display:flex; align-items:baseline; gap:8px; }
+  .brand-mark{ color:var(--accent); }
+  .icon-btn{ background:none; border:none; font-size:calc(19/16*1rem); cursor:pointer; padding:7px; border-radius:var(--radius-sm); line-height:1; color:var(--ink); display:inline-flex; align-items:center; justify-content:center; }
+  .icon-btn svg{ display:block; }
+  .icon-btn:hover{ background:var(--paper); }
+  .save-status{ font-size:calc(11/16*1rem); color:var(--ink-muted); text-align:center; margin-top:4px; height:14px; opacity:0; transition:opacity .3s ease; font-family:var(--font-mono); }
+  .save-status.show{ opacity:1; }
+
+  /* ---------- Content ---------- */
+  .content{ flex:1; max-width:860px; margin:0 auto; width:100%; padding:14px 16px 100px; }
+  .section-title{ font-family:var(--font-display); font-weight:700; font-size:calc(15/16*1rem); letter-spacing:-0.01em; margin:22px 0 10px; }
+  .section-title:first-child{ margin-top:0; }
+  .empty-note{ font-size:calc(13/16*1rem); color:var(--ink-muted); padding:14px 0; line-height:1.5; }
+
+  /* ---------- Stat strip ---------- */
+  .stat-strip{ display:flex; gap:8px; margin-bottom:16px; }
+  .stat-chip{ flex:1; min-width:0; background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-md); padding:10px 11px; box-shadow:var(--shadow-card); }
+  .stat-chip.tap{ cursor:pointer; }
+  .stat-chip-label{ font-size:calc(10/16*1rem); color:var(--ink-muted); font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+  .stat-chip-value{ font-family:var(--font-mono); font-size:calc(15/16*1rem); font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .stat-chip-value.good{ color:var(--good); } .stat-chip-value.warn{ color:var(--warn); } .stat-chip-value.bad{ color:var(--bad); }
+
+  /* ---------- Calendar ---------- */
+  .cal-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .cal-month-label{ font-family:var(--font-display); font-weight:700; font-size:calc(16.5/16*1rem); }
+  .cal-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:6px; }
+  .cal-weekday{ text-align:center; font-size:calc(10.5/16*1rem); font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.03em; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .cal-cell{ position:relative; min-height:56px; border-radius:10px; border:1px solid var(--rule); background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; overflow:hidden; padding:4px 2px; }
+  .cal-cell.empty{ background:transparent; border-color:transparent; cursor:default; }
+  .cal-cell.today{ box-shadow:inset 0 0 0 2px var(--ink); }
+  .cal-cell.bal-warn{ background-color:color-mix(in srgb, var(--warn) 14%, var(--surface)); }
+  .cal-cell.bal-bad{ background-color:color-mix(in srgb, var(--bad) 16%, var(--surface)); }
+  .cal-daynum{ font-family:var(--font-mono); font-size:calc(12/16*1rem); font-weight:600; }
+  .cal-net{ font-family:var(--font-mono); font-size:calc(9.5/16*1rem); font-weight:600; color:var(--ink); }
+  .cal-net.pos{ color:var(--good); }
+  .period-dot{ position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%; }
+  .period-dot.p0{ background:var(--accent); } .period-dot.p1{ background:var(--accent2); }
+  .cal-legend{ display:flex; flex-wrap:wrap; gap:12px; margin-top:14px; font-size:calc(11/16*1rem); color:var(--ink-muted); }
+  .legend-item{ display:flex; align-items:center; gap:6px; }
+  .legend-swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+
+  .fab{ position:fixed; right:18px; bottom:82px; width:54px; height:54px; border-radius:50%; background:var(--accent); color:var(--accent-ink); border:none; font-size:26px; line-height:1; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.22); z-index:90; display:none; align-items:center; justify-content:center; }
+  .fab.show{ display:flex; }
+  .fab:active{ transform:scale(.95); }
+
+  /* ---------- Tab bar ---------- */
+  .tabbar{ position:fixed; left:0; right:0; bottom:0; background:var(--surface); border-top:1px solid var(--rule); z-index:100; padding-bottom:env(safe-area-inset-bottom, 0); }
+  .tabbar-inner{ max-width:860px; margin:0 auto; display:flex; }
+  .tab-btn{ flex:1; background:none; border:none; padding:10px 4px 8px; font-size:calc(11/16*1rem); font-weight:600; color:var(--ink-muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .tab-btn .tab-icon{ font-size:calc(19/16*1rem); }
+  .tab-btn.active{ color:var(--accent); }
+
+  /* ---------- Due / transaction rows ---------- */
+  .due-row{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
+  .due-day-badge{ font-family:var(--font-mono); font-size:calc(11/16*1rem); color:var(--ink-muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:4px 6px; text-align:center; min-width:30px; flex-shrink:0; }
+  .due-info{ flex:1; min-width:0; }
+  .due-name{ font-size:calc(14/16*1rem); font-weight:600; }
+  .due-cat{ font-size:calc(11.5/16*1rem); color:var(--ink-muted); }
+  .due-amount{ font-family:var(--font-mono); font-size:calc(13/16*1rem); color:var(--ink); font-weight:600; white-space:nowrap; }
+  .due-amount.income{ color:var(--good); }
+  .icon-badge{ width:32px; height:32px; border-radius:11px; background:var(--paper); border:1px solid var(--rule); display:flex; align-items:center; justify-content:center; font-size:calc(16/16*1rem); flex-shrink:0; }
+  .icon-badge.sm{ width:26px; height:26px; border-radius:8px; font-size:calc(13/16*1rem); }
+  .check{ width:26px; height:26px; border:1.5px solid var(--rule); border-radius:7px; display:flex; align-items:center; justify-content:center; cursor:pointer; background:var(--paper); flex-shrink:0; font-size:calc(14/16*1rem); transition:transform .12s ease, background .12s ease, border-color .12s ease; }
+  .check.checked{ background:var(--good); border-color:var(--good); color:#fff; transform:scale(1.02); }
+
+  /* ---------- Budgets screen ---------- */
+  .period-pills{ display:flex; gap:8px; margin-bottom:16px; }
+  .pill{ flex:1; padding:9px 10px; border-radius:999px; border:1px solid var(--rule); background:var(--surface); color:var(--ink-muted); font-size:calc(13/16*1rem); font-weight:600; cursor:pointer; text-align:center; }
+  .pill.active{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .hero-card{ background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow-card); position:relative; overflow:hidden; margin-bottom:18px; }
+  .hero-label{ font-size:calc(12/16*1rem); text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--ink-muted); }
+  .hero-figure{ font-family:var(--font-mono); font-size:calc(34/16*1rem); font-weight:600; margin:6px 0 2px; font-variant-numeric:tabular-nums; }
+  .hero-figure.good{ color:var(--good); } .hero-figure.warn{ color:var(--warn); } .hero-figure.bad{ color:var(--bad); }
+  .hero-sub{ font-family:var(--font-mono); font-size:calc(13/16*1rem); color:var(--ink-muted); }
+  .progress-track{ height:8px; background:var(--paper); border:1px solid var(--rule); border-radius:999px; overflow:hidden; margin-top:12px; }
+  .progress-fill{ height:100%; background:var(--accent); transition:width .3s ease; }
+  .progress-fill.good{ background:var(--good); } .progress-fill.warn{ background:var(--warn); } .progress-fill.bad{ background:var(--bad); }
+
+  .ledger-card{ border:1px solid var(--rule); background:var(--surface); border-radius:var(--radius-md); margin-bottom:10px; overflow:hidden; box-shadow:var(--shadow-card); }
+  .ledger-row{ display:flex; }
+  .ledger-tab{ width:6px; flex-shrink:0; background:var(--ink-muted); }
+  .ledger-tab.good{ background:var(--good); } .ledger-tab.warn{ background:var(--warn); } .ledger-tab.bad{ background:var(--bad); } .ledger-tab.neutral{ background:var(--accent); }
+  .ledger-body{ flex:1; padding:12px 13px; min-width:0; cursor:pointer; }
+  .ledger-header-row{ display:flex; align-items:center; gap:11px; }
+  .ledger-info{ flex:1; min-width:0; }
+  .ledger-name-row{ display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; }
+  .ledger-name{ font-weight:600; font-size:calc(15/16*1rem); }
+  .due-tag{ font-family:var(--font-mono); font-size:calc(10.5/16*1rem); color:var(--ink-muted); background:var(--paper); border:1px solid var(--rule); padding:1px 6px; border-radius:6px; white-space:nowrap; }
+  .ledger-amounts{ font-family:var(--font-mono); font-size:calc(12.5/16*1rem); color:var(--ink-muted); margin-top:2px; font-variant-numeric:tabular-nums; }
+  .gear-btn{ background:none; border:none; color:var(--ink-muted); font-size:calc(18/16*1rem); cursor:pointer; padding:6px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; }
+  .gear-btn:hover{ color:var(--ink); }
+  .gear-btn svg{ display:block; width:16px; height:16px; }
+  .chevron{ color:var(--ink-muted); font-size:calc(13/16*1rem); transition:transform .15s ease; flex-shrink:0; }
+  .chevron.open{ transform:rotate(90deg); }
+  .txn-accordion{ padding:0 13px 12px; display:flex; flex-direction:column; gap:6px; }
+  .add-btn{ width:100%; padding:10px; background:var(--paper); border:1px dashed var(--rule); border-radius:10px; cursor:pointer; font-size:calc(13.5/16*1rem); font-weight:600; color:var(--accent); margin-top:6px; }
+  .add-category-btn{ width:100%; padding:15px; background:var(--accent); color:var(--accent-ink); border:none; border-radius:var(--radius-md); cursor:pointer; font-size:calc(15/16*1rem); font-weight:700; margin:18px 0 4px; }
+
+  /* ---------- Modals ---------- */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(20,18,14,0.45); z-index:1000; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(2px); }
+  .modal-overlay.show{ display:flex; animation:fadeIn .15s ease; }
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+  .modal-box{ background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-lg); padding:22px; max-width:420px; width:100%; max-height:85vh; overflow-y:auto; animation:popIn .15s ease; position:relative; }
+  @keyframes popIn{ from{opacity:0; transform:scale(.97) translateY(4px);} to{opacity:1; transform:scale(1) translateY(0);} }
+  .modal-title{ font-family:var(--font-display); font-weight:700; font-size:calc(18/16*1rem); margin-bottom:18px; }
+  .form-group{ margin-bottom:14px; }
+  .form-label{ display:block; font-size:calc(12.5/16*1rem); font-weight:700; color:var(--ink-muted); margin-bottom:6px; }
+  .form-hint{ font-size:calc(11.5/16*1rem); color:var(--ink-muted); margin-top:5px; line-height:1.4; }
+  .form-input{ width:100%; padding:10px 12px; border:1px solid var(--rule); border-radius:9px; font-size:calc(15/16*1rem); background:var(--paper); color:var(--ink); }
+  .form-input:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  select.form-input{ appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239C7A80'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; }
+  input[type="range"]{ -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:999px; background:var(--rule); outline:none; cursor:pointer; margin:6px 0; }
+  input[type="range"]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:22px; height:22px; border-radius:50%; background:var(--accent); cursor:pointer; border:3px solid var(--surface); box-shadow:0 1px 5px rgba(0,0,0,0.3); }
+  input[type="range"]::-moz-range-thumb{ width:22px; height:22px; border-radius:50%; background:var(--accent); cursor:pointer; border:3px solid var(--surface); box-shadow:0 1px 5px rgba(0,0,0,0.3); }
+  input[type="range"]::-moz-range-track{ height:6px; border-radius:999px; background:var(--rule); }
+  .slider-value{ font-family:var(--font-mono); font-weight:600; color:var(--accent); }
+  .font-option{ padding:12px 4px; border-bottom:1px solid var(--rule); cursor:pointer; }
+  .font-option:last-child{ border-bottom:none; }
+  .font-option:hover{ background:var(--paper); }
+  .font-option-preview{ font-size:20px; font-weight:700; }
+  .font-option-label{ font-size:calc(11/16*1rem); color:var(--ink-muted); margin-top:2px; }
+  .bg-preview{ height:100px; border-radius:10px; background-size:cover; background-position:center; border:1px solid var(--rule); background-color:var(--paper); }
+  textarea.form-input{ min-height:110px; resize:vertical; font-family:var(--font-mono); font-size:calc(12.5/16*1rem); }
+  .row-2{ display:flex; gap:10px; }
+  .row-2 > .form-group{ flex:1; }
+  .check-row{ display:flex; align-items:center; gap:10px; }
+  .check-row label{ font-size:calc(14/16*1rem); }
+  .period-selector, .type-pills{ display:flex; gap:6px; }
+  .period-option, .type-option{ flex:1; padding:8px; border:1.5px solid var(--rule); background:var(--paper); border-radius:8px; text-align:center; font-size:calc(13/16*1rem); cursor:pointer; font-weight:600; color:var(--ink); }
+  .period-option.active, .type-option.active{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .icon-picker{ display:flex; flex-wrap:wrap; gap:6px; }
+  .icon-option{ width:36px; height:36px; border-radius:10px; border:1.5px solid var(--rule); background:var(--paper); font-size:calc(17/16*1rem); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .icon-option.active{ border-color:var(--accent); background:var(--accent-soft); }
+  .icon-custom-input{ width:56px; flex-shrink:0; text-align:center; padding:0; }
+  .modal-buttons{ display:flex; gap:10px; margin-top:20px; }
+  .btn{ flex:1; padding:12px; border:none; border-radius:10px; font-size:calc(14.5/16*1rem); font-weight:700; cursor:pointer; transition:transform .1s ease; }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); }
+  .btn-secondary{ background:var(--paper); color:var(--ink); border:1px solid var(--rule); }
+  .btn-danger{ background:none; color:var(--bad); border:1px solid var(--bad); flex:0 0 auto; padding:12px 16px; }
+  .menu-list{ list-style:none; }
+  .menu-list li{ padding:14px 4px; border-bottom:1px solid var(--rule); cursor:pointer; font-size:calc(15/16*1rem); }
+  .menu-list li:last-child{ border-bottom:none; }
+  .menu-list li:hover{ background:var(--paper); }
+
+  /* ---------- Settings screen (grouped, icon rows) ---------- */
+  .settings-section-label{ font-size:calc(11/16*1rem); font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-muted); margin:18px 2px 8px; }
+  .settings-section-label:first-child{ margin-top:0; }
+  .settings-list{ background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-md); overflow:hidden; }
+  .settings-row{ display:flex; align-items:center; gap:12px; padding:12px 14px; cursor:pointer; border-bottom:1px solid var(--rule); }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row:hover{ background:var(--paper); }
+  .settings-icon{ width:32px; height:32px; border-radius:9px; background:var(--paper); display:flex; align-items:center; justify-content:center; color:var(--accent); flex-shrink:0; }
+  .settings-icon svg{ width:17px; height:17px; display:block; }
+  .settings-row-label{ flex:1; font-size:calc(14.5/16*1rem); font-weight:500; }
+  .settings-chevron{ color:var(--ink-muted); font-size:calc(16/16*1rem); flex-shrink:0; }
+
+  /* ---------- Rose Garden flourishes ---------- */
+  [data-theme="rose"] .section-title::before{ content:"❀ "; color:var(--accent); }
+  [data-theme="rose"] .check.checked{ color:transparent; position:relative; }
+  [data-theme="rose"] .check.checked::after{ content:"❀"; position:absolute; color:#fff; font-size:0.85em; }
+  [data-theme="rose"] .hero-card::after{ content:"❀"; position:absolute; right:-6px; top:-14px; font-size:76px; color:var(--accent); opacity:.08; transform:rotate(12deg); pointer-events:none; }
+  [data-theme="rose"] .modal-box::after{ content:"❀"; position:absolute; right:-10px; bottom:-16px; font-size:64px; color:var(--accent); opacity:.06; pointer-events:none; }
+</style>
+</head>
+<body data-theme="rose" data-font="elegant">
+<div id="bgImageLayer"></div>
+<div id="bgOverlay"></div>
+<div class="app">
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-row">
+        <div class="brand"><span class="brand-mark" id="brandMark">❀</span> Ledger</div>
+        <button class="icon-btn" aria-label="Settings" onclick="showModal('settingsModal')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+      </div>
+      <div class="save-status" id="saveStatus"></div>
+    </div>
+  </header>
+
+  <main class="content" id="content"></main>
+
+  <button class="fab" id="addFab" aria-label="Add a transaction" onclick="openTransactionModal('expense', null)">+</button>
+
+  <nav class="tabbar">
+    <div class="tabbar-inner">
+      <button class="tab-btn active" data-screen="calendar" onclick="switchScreen('calendar')"><span class="tab-icon">📅</span>Calendar</button>
+      <button class="tab-btn" data-screen="budgets" onclick="switchScreen('budgets')"><span class="tab-icon">🗂️</span>Budgets</button>
+    </div>
+  </nav>
+</div>
+
+<!-- Transaction modal (add/edit expense or income) -->
+<div class="modal-overlay" id="transactionModal">
+  <div class="modal-box">
+    <div class="modal-title" id="transactionModalTitle">Add a transaction</div>
+    <div class="form-group">
+      <div class="type-pills" id="typePills">
+        <div class="type-option active" onclick="selectTxnType(this,'expense')">💸 Expense</div>
+        <div class="type-option" onclick="selectTxnType(this,'income')">💰 Income</div>
+      </div>
+    </div>
+    <div class="form-group" id="txnCategoryGroup">
+      <label class="form-label">Category</label>
+      <select class="form-input" id="txnCategory" onchange="handleCategorySelectChange()"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="txnNameLabel">Name</label>
+      <input type="text" class="form-input" id="txnName" placeholder="e.g. Electric bill">
+    </div>
+    <div class="row-2">
+      <div class="form-group">
+        <label class="form-label">Amount</label>
+        <input type="number" class="form-input" id="txnAmount" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Day of month</label>
+        <input type="number" class="form-input" id="txnDay" min="1" max="31" placeholder="1–31">
+      </div>
+    </div>
+    <div class="form-group check-row">
+      <div class="check" id="txnPaidCheck" role="button" tabindex="0" onclick="toggleTxnPaidField()"></div>
+      <label id="txnPaidLabel">Already paid</label>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-danger" id="txnDeleteBtn" style="display:none" onclick="deleteTransaction()">Delete</button>
+      <button class="btn btn-secondary" onclick="closeModal('transactionModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTransaction()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Category modal -->
+<div class="modal-overlay" id="categoryModal">
+  <div class="modal-box">
+    <div class="modal-title" id="categoryModalTitle">Add category</div>
+    <div class="form-group">
+      <label class="form-label">Category name</label>
+      <input type="text" class="form-input" id="categoryName">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Icon</label>
+      <div class="icon-picker" id="categoryIconPicker">
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🏠')">🏠</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🚗')">🚗</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'⛽')">⛽</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🛒')">🛒</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'💡')">💡</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'📱')">📱</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🌐')">🌐</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🛡️')">🛡️</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'💳')">💳</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🏋️')">🏋️</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🥋')">🥋</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🎓')">🎓</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🐾')">🐾</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🎬')">🎬</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🍽️')">🍽️</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'💊')">💊</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🧴')">🧴</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🎁')">🎁</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'✈️')">✈️</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'👤')">👤</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'👩')">👩</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'👨')">👨</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🧾')">🧾</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🔧')">🔧</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🌱')">🌱</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🎂')">🎂</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'👶')">👶</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🗑️')">🗑️</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'🏦')">🏦</button>
+        <button type="button" class="icon-option" onclick="selectPresetIcon(this,'📦')">📦</button>
+        <input type="text" class="form-input icon-custom-input" id="categoryIconCustom" maxlength="4" placeholder="✎" oninput="selectCustomIcon(this.value)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Which pay period(s)?</label>
+      <div class="period-selector" id="categoryPeriodSelector">
+        <div class="period-option active" onclick="selectCategoryPeriod(this,'both')">Both</div>
+        <div class="period-option" onclick="selectCategoryPeriod(this,'p1')">Period 1</div>
+        <div class="period-option" onclick="selectCategoryPeriod(this,'p2')">Period 2</div>
+      </div>
+    </div>
+    <div class="row-2" id="categoryBudgetFields">
+      <div class="form-group">
+        <label class="form-label" id="categoryBudgetLabel1">Budget (Period 1)</label>
+        <input type="number" class="form-input" id="categoryBudget1" step="0.01">
+      </div>
+      <div class="form-group" id="categoryBudgetGroup2">
+        <label class="form-label">Budget (Period 2)</label>
+        <input type="number" class="form-input" id="categoryBudget2" step="0.01">
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="cancelCategoryModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCategory()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-title">Settings</div>
+
+    <div class="settings-section-label">Appearance</div>
+    <div class="settings-list">
+      <div class="settings-row" onclick="showModal('themeModal')">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg></div>
+        <div class="settings-row-label">Color theme</div>
+        <div class="settings-chevron">›</div>
+      </div>
+      <div class="settings-row" onclick="openFontModal()">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg></div>
+        <div class="settings-row-label">Font style</div>
+        <div class="settings-chevron">›</div>
+      </div>
+      <div class="settings-row" onclick="openSizeModal()">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg></div>
+        <div class="settings-row-label">Text size</div>
+        <div class="settings-chevron">›</div>
+      </div>
+      <div class="settings-row" onclick="openBackgroundModal()">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>
+        <div class="settings-row-label">Background image</div>
+        <div class="settings-chevron">›</div>
+      </div>
+    </div>
+
+    <div class="settings-section-label">Budget</div>
+    <div class="settings-list">
+      <div class="settings-row" onclick="openPeriodSettings()">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+        <div class="settings-row-label">Pay period settings</div>
+        <div class="settings-chevron">›</div>
+      </div>
+      <div class="settings-row" onclick="openBalanceSettings()">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
+        <div class="settings-row-label">Starting balance</div>
+        <div class="settings-chevron">›</div>
+      </div>
+    </div>
+
+    <div class="settings-section-label">Data</div>
+    <div class="settings-list">
+      <div class="settings-row" onclick="exportToMarkdown()">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></div>
+        <div class="settings-row-label">Export to Markdown</div>
+      </div>
+      <div class="settings-row" onclick="exportToJSON()">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></div>
+        <div class="settings-row-label">Export JSON backup</div>
+      </div>
+      <div class="settings-row" onclick="showModal('importModal')">
+        <div class="settings-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></div>
+        <div class="settings-row-label">Import JSON</div>
+      </div>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Theme modal -->
+<div class="modal-overlay" id="themeModal">
+  <div class="modal-box">
+    <div class="modal-title">Select theme</div>
+    <ul class="menu-list">
+      <li onclick="changeTheme('rose')">🌸 Rose Garden</li>
+      <li onclick="changeTheme('light')">Ivory</li>
+      <li onclick="changeTheme('dark')">Midnight</li>
+      <li onclick="changeTheme('blue')">Harbor</li>
+      <li onclick="changeTheme('green')">Meadow</li>
+      <li onclick="closeModal('themeModal')">Cancel</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Font style modal -->
+<div class="modal-overlay" id="fontModal">
+  <div class="modal-box">
+    <div class="modal-title">Font style</div>
+    <div class="form-label" style="margin-bottom:8px;">Curated pairings</div>
+    <div>
+      <div class="font-option" onclick="changeFont('modern')">
+        <div class="font-option-preview" style="font-family:'Space Grotesk',sans-serif;">Ledger</div>
+        <div class="font-option-label">Modern</div>
+      </div>
+      <div class="font-option" onclick="changeFont('elegant')">
+        <div class="font-option-preview" style="font-family:'Playfair Display',serif;">Ledger</div>
+        <div class="font-option-label">Elegant</div>
+      </div>
+      <div class="font-option" onclick="changeFont('classic')">
+        <div class="font-option-preview" style="font-family:'Lora',serif;">Ledger</div>
+        <div class="font-option-label">Classic</div>
+      </div>
+      <div class="font-option" onclick="changeFont('rounded')">
+        <div class="font-option-preview" style="font-family:'Quicksand',sans-serif;">Ledger</div>
+        <div class="font-option-label">Rounded</div>
+      </div>
+      <div class="font-option" onclick="changeFont('handwritten')">
+        <div class="font-option-preview" style="font-family:'Caveat',cursive; font-size:26px;">Ledger</div>
+        <div class="font-option-label">Handwritten</div>
+      </div>
+      <div class="font-option" onclick="changeFont('typewriter')">
+        <div class="font-option-preview" style="font-family:'Special Elite',monospace; font-size:17px;">Ledger</div>
+        <div class="font-option-label">Typewriter</div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:18px;">
+      <label class="form-label">Search for more fonts</label>
+      <input type="text" class="form-input" id="fontSearchInput" placeholder="Try “Merriweather” or “Poppins”…" oninput="handleFontSearch(this.value)">
+      <div class="settings-list" id="fontSearchResults" style="display:none; margin-top:8px;"></div>
+    </div>
+
+    <div class="due-row" id="customFontActiveRow" style="display:none; cursor:default;">
+      <div class="due-info">
+        <div class="due-name">Custom font: <span id="customFontActiveName"></span></div>
+        <div class="due-cat">Applied throughout the app</div>
+      </div>
+      <button class="gear-btn" aria-label="Remove custom font" onclick="clearCustomFont()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="form-hint">Dollar amounts and calendar dates stay in a clean monospace style so figures line up and are easy to check at a glance — everything else follows your choice above.</div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('fontModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Text size modal -->
+<div class="modal-overlay" id="sizeModal">
+  <div class="modal-box">
+    <div class="modal-title">Text size</div>
+    <div class="period-selector">
+      <div class="period-option" style="font-size:13px;" onclick="changeTextSize(15,this)">A</div>
+      <div class="period-option" style="font-size:16px;" onclick="changeTextSize(16,this)">A</div>
+      <div class="period-option" style="font-size:19px;" onclick="changeTextSize(18,this)">A</div>
+      <div class="period-option" style="font-size:22px;" onclick="changeTextSize(20,this)">A</div>
+    </div>
+    <div class="form-hint">Changes the size of text throughout the app.</div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('sizeModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Background image modal -->
+<div class="modal-overlay" id="backgroundModal">
+  <div class="modal-box">
+    <div class="modal-title">Background image</div>
+    <div class="form-group">
+      <button class="btn btn-secondary" style="width:100%" onclick="document.getElementById('bgFileInput').click()">📁 Choose from device</button>
+      <input type="file" accept="image/*" id="bgFileInput" style="display:none" onchange="handleBgFileSelect(event)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Or paste an image URL</label>
+      <input type="text" class="form-input" id="bgUrlInput" placeholder="https://example.com/photo.jpg">
+      <button class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="useBgUrl()">Use this URL</button>
+    </div>
+    <div class="form-group" id="bgPreviewGroup" style="display:none;">
+      <label class="form-label">Preview</label>
+      <div class="bg-preview" id="bgPreviewBox"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Overlay strength: <span class="slider-value" id="bgOpacityValue">80%</span></label>
+      <input type="range" id="bgOpacityInput" min="40" max="95" value="80" oninput="previewBgOpacity(this.value)">
+      <div class="form-hint">Higher = more subtle image, easier to read text.</div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-danger" onclick="removeBackground()">Remove</button>
+      <button class="btn btn-secondary" onclick="cancelBackgroundModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBackground()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pay period settings modal -->
+<div class="modal-overlay" id="periodModal">
+  <div class="modal-box">
+    <div class="modal-title">Pay period settings</div>
+    <div class="form-group">
+      <label class="form-label">Period 1 runs from day 1 to:</label>
+      <input type="number" class="form-input" id="periodSplitInput" min="2" max="31">
+      <div class="form-hint">Period 2 starts the next day and runs to the end of the month. This is used on the Budgets tab and to color-code the calendar.</div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('periodModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePeriodSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Starting balance modal -->
+<div class="modal-overlay" id="balanceModal">
+  <div class="modal-box">
+    <div class="modal-title">Starting balance</div>
+    <div class="form-group">
+      <label class="form-label">Balance on day 1 of the month</label>
+      <input type="number" class="form-input" id="balanceInput" step="0.01">
+      <div class="form-hint">The Calendar tab projects your balance forward from here, day by day, based on the income and bills you've entered.</div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('balanceModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBalanceSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal-box">
+    <div class="modal-title">Import JSON</div>
+    <div class="form-group">
+      <label class="form-label">Paste backup JSON</label>
+      <textarea class="form-input" id="importText" placeholder="Paste the contents of a Ledger JSON export here"></textarea>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('importModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="importFromJSON()">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Day detail modal -->
+<div class="modal-overlay" id="dayDetailModal">
+  <div class="modal-box">
+    <div class="modal-title" id="dayDetailTitle">Day</div>
+    <div class="hero-sub" id="dayDetailBalance" style="margin-bottom:12px;"></div>
+    <div id="dayDetailList"></div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('dayDetailModal')">Close</button>
+      <button class="btn btn-primary" onclick="addFromDayDetail()">+ Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   STATE
+   ========================================================= */
+let currentScreen = 'calendar';
+let currentPeriod = 0;
+let currentTheme = 'rose';
+let currentFont = 'elegant';
+let customFontFamily = null;
+const GOOGLE_FONTS = [
+  'Roboto','Open Sans','Lato','Montserrat','Poppins','Raleway','Inter','Work Sans','DM Sans','Karla',
+  'Rubik','Barlow','Archivo','Mulish','Manrope','Josefin Sans','Comfortaa','Varela Round','Titillium Web','Oxygen',
+  'PT Sans','Noto Sans','Source Sans Pro','Ubuntu','Hind','Heebo','Jost','Outfit','Sora','Figtree',
+  'Merriweather','PT Serif','Noto Serif','Bitter','Libre Baskerville','Crimson Text','Cormorant Garamond','EB Garamond','Vollkorn','Spectral',
+  'Cardo','Domine','Alegreya','Amiri','Source Serif Pro','Zilla Slab','Frank Ruhl Libre','Cormorant',
+  'Bebas Neue','Anton','Abril Fatface','Righteous','Fredoka','Baloo 2','Passion One','Alfa Slab One','Bungee','Archivo Black','Oswald','Staatliches',
+  'Pacifico','Great Vibes','Sacramento','Shadows Into Light','Indie Flower','Permanent Marker','Kalam','Satisfy','Dancing Script','Amatic SC',
+  'Roboto Mono','Source Code Pro','Fira Code','JetBrains Mono','Space Mono','Inconsolata'
+];
+let currentTextSize = 16;
+let backgroundImage = null;
+let backgroundOpacity = 0.8;
+let pendingBgImage = null;
+let pendingBgOpacity = 0.8;
+const MAX_BG_DIMENSION = 1600;
+const BG_JPEG_QUALITY = 0.82;
+let periodSplitDay = 16;   // period 2 starts on this day
+let startingBalance = 1200;
+let selectedIcon = '🧾';
+let selectedCategoryPeriods = [0, 1];
+let editingCategory = null;
+let returningToTransactionModal = false;
+let txnDraft = null;
+let currentTxnType = 'expense';
+let editingTransactionId = null;
+let expandedCategory = null;
+let viewYear, viewMonth, selectedDay = null;
+
+const today = new Date();
+viewYear = today.getFullYear();
+viewMonth = today.getMonth();
+
+/* =========================================================
+   DUMMY DATA — illustrative starting example
+   ========================================================= */
+const defaultCategories = {
+  'Mortgage':          { icon:'🏠', periods:[0],   budget: 1450 },
+  'Insurance':         { icon:'🛡️', periods:[0],   budget: 165 },
+  'Subscriptions':     { icon:'🎬', periods:[0],   budget: 45 },
+  'Pet Care':          { icon:'🐾', periods:[0],   budget: 40 },
+  'Gym':               { icon:'🏋️', periods:[0,1], budget: 60 },
+  'Groceries':         { icon:'🛒', periods:[0,1], budget: 300 },
+  'Dining Out':        { icon:'🍽️', periods:[0,1], budget: 150 },
+  'Gas & Auto':        { icon:'⛽', periods:[0,1], budget: 120 },
+  'Personal (Mom)':    { icon:'👩', periods:[0,1], budget: 100 },
+  'Personal (Dad)':    { icon:'👨', periods:[0,1], budget: 100 },
+  'Miscellaneous':     { icon:'📦', periods:[0,1], budget: 75 },
+  'Utilities':         { icon:'💡', periods:[1],   budget: 220 },
+  'Kids Activities':   { icon:'🥋', periods:[1],   budget: 90 },
+  'Car Payment':       { icon:'🚗', periods:[1],   budget: 420 },
+  'Home Repairs':      { icon:'🔧', periods:[0],   budget: 150 }
+};
+
+function mkTxn(type, name, categoryName, amount, day, paid){
+  return { id: 't' + Math.random().toString(36).slice(2,10), type, name, categoryName: categoryName || null, amount, day, paid };
+}
+const defaultTransactions = [
+  mkTxn('income', 'Paycheck — Alex', null, 2150, 1, true),
+  mkTxn('income', 'Paycheck — Sam', null, 1780, 3, true),
+  mkTxn('income', 'Paycheck — Alex', null, 2150, 15, false),
+  mkTxn('income', 'Paycheck — Sam', null, 1780, 18, false),
+  mkTxn('income', 'Freelance project', null, 350, 22, false),
+
+  mkTxn('expense', 'Mortgage payment', 'Mortgage', 1450, 1, true),
+  mkTxn('expense', 'Auto insurance', 'Insurance', 165, 1, true),
+  mkTxn('expense', 'Streaming bundle', 'Subscriptions', 45, 3, true),
+  mkTxn('expense', "Mom's allowance", 'Personal (Mom)', 100, 2, true),
+  mkTxn('expense', "Dad's allowance", 'Personal (Dad)', 100, 2, true),
+  mkTxn('expense', 'Groceries run', 'Groceries', 95, 2, true),
+  mkTxn('expense', 'Gas', 'Gas & Auto', 55, 4, true),
+  mkTxn('expense', 'Gym membership', 'Gym', 60, 5, true),
+  mkTxn('expense', 'Vet visit', 'Pet Care', 40, 6, true),
+  mkTxn('expense', 'Dinner date night', 'Dining Out', 65, 7, true),
+  mkTxn('expense', 'Home supplies', 'Miscellaneous', 35, 8, true),
+  mkTxn('expense', 'Groceries run', 'Groceries', 110, 9, true),
+  mkTxn('expense', 'Gas', 'Gas & Auto', 60, 11, false),
+  mkTxn('expense', 'Water heater replacement', 'Home Repairs', 2950, 12, true),
+  mkTxn('expense', 'Takeout', 'Dining Out', 38, 13, false),
+  mkTxn('expense', 'Groceries run', 'Groceries', 88, 17, false),
+  mkTxn('expense', "Mom's allowance", 'Personal (Mom)', 100, 17, false),
+  mkTxn('expense', "Dad's allowance", 'Personal (Dad)', 100, 17, false),
+  mkTxn('expense', 'Car payment', 'Car Payment', 420, 18, false),
+  mkTxn('expense', 'Kidstrong class', 'Kids Activities', 90, 19, false),
+  mkTxn('expense', 'Electric bill', 'Utilities', 140, 20, false),
+  mkTxn('expense', 'Water bill', 'Utilities', 80, 20, false),
+  mkTxn('expense', 'Gym membership', 'Gym', 60, 20, false),
+  mkTxn('expense', 'Dinner out', 'Dining Out', 52, 21, false),
+  mkTxn('expense', 'Amazon order', 'Miscellaneous', 42, 22, false),
+  mkTxn('expense', 'Gas', 'Gas & Auto', 58, 23, false),
+  mkTxn('expense', 'Groceries run', 'Groceries', 102, 24, false)
+];
+
+let categories = JSON.parse(JSON.stringify(defaultCategories));
+let transactions = JSON.parse(JSON.stringify(defaultTransactions));
+
+/* =========================================================
+   STORAGE (Claude artifact storage, falls back to localStorage
+   so this file keeps working when saved and opened as a normal
+   local HTML file outside Claude.ai)
+   ========================================================= */
+function hasCloudStorage(){
+  return typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+}
+async function loadState(){
+  if (hasCloudStorage()){
+    try{
+      const res = await window.storage.get('ledgerCalendarState', false);
+      if (res && res.value) return JSON.parse(res.value);
+    }catch(e){ /* no cloud record yet */ }
+  }
+  try{
+    const raw = localStorage.getItem('ledgerCalendarState');
+    if (raw) return JSON.parse(raw);
+  }catch(e){ /* localStorage unavailable */ }
+  return null;
+}
+let saveStatusTimer = null;
+function setSaveStatus(text, autoHide){
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(saveStatusTimer);
+  if (autoHide) saveStatusTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+async function persist(){
+  setSaveStatus('Saving…', false);
+  const payload = JSON.stringify({ categories, transactions, theme: currentTheme, font: currentFont, customFont: customFontFamily, textSize: currentTextSize, periodSplitDay, startingBalance, currentPeriod });
+  let ok = false;
+  if (hasCloudStorage()){
+    try{ const res = await window.storage.set('ledgerCalendarState', payload, false); ok = !!res; }catch(e){ ok = false; }
+  }
+  try{ localStorage.setItem('ledgerCalendarState', payload); ok = true; }catch(e){ /* ignore */ }
+  setSaveStatus(ok ? 'Saved' : "Couldn't save — check connection", true);
+}
+
+/* Background image gets its own storage key so a large image isn't
+   re-saved on every single checkbox tap. */
+async function loadBackground(){
+  if (hasCloudStorage()){
+    try{
+      const res = await window.storage.get('ledgerCalendarBackground', false);
+      if (res && res.value) return JSON.parse(res.value);
+    }catch(e){ /* no cloud record yet */ }
+  }
+  try{
+    const raw = localStorage.getItem('ledgerCalendarBackground');
+    if (raw) return JSON.parse(raw);
+  }catch(e){ /* localStorage unavailable */ }
+  return null;
+}
+async function persistBackground(){
+  const payload = JSON.stringify({ backgroundImage, backgroundOpacity });
+  let ok = false;
+  if (hasCloudStorage()){
+    try{ const res = await window.storage.set('ledgerCalendarBackground', payload, false); ok = !!res; }catch(e){ ok = false; }
+  }
+  try{ localStorage.setItem('ledgerCalendarBackground', payload); ok = true; }catch(e){ /* likely quota exceeded */ }
+  return ok;
+}
+
+/* =========================================================
+   HELPERS: escaping & formatting
+   ========================================================= */
+function escAttr(str){ return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function escHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function money(n){ return '$' + (Math.round((n + Number.EPSILON) * 100) / 100).toLocaleString('en-US'); }
+function formatCompact(n){
+  const sign = n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  if (abs >= 1000) return sign + '$' + (abs % 1000 === 0 ? (abs/1000).toFixed(0) : (abs/1000).toFixed(1)) + 'k';
+  return sign + '$' + Math.round(abs);
+}
+
+/* =========================================================
+   HELPERS: dates & pay periods
+   ========================================================= */
+function getPeriodForDay(day){ return day < periodSplitDay ? 0 : 1; }
+function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
+function firstWeekday(year, month){ return new Date(year, month, 1).getDay(); }
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+/* =========================================================
+   HELPERS: budget math (category = allocation, not dated)
+   ========================================================= */
+function getCategoryIcon(catName){ return (categories[catName] && categories[catName].icon) || '🧾'; }
+function getCategoryBudget(category, period){
+  return Array.isArray(category.budget) ? category.budget[period] : category.budget;
+}
+function getCategorySpent(catName, period){
+  return transactions
+    .filter(t => t.type === 'expense' && t.categoryName === catName && t.paid && getPeriodForDay(t.day) === period)
+    .reduce((sum, t) => sum + t.amount, 0);
+}
+function getCategoryStatus(catName, period){
+  const cat = categories[catName];
+  const budget = getCategoryBudget(cat, period);
+  const spent = getCategorySpent(catName, period);
+  if (spent === 0) return 'neutral';
+  if (spent > budget) return 'bad';
+  if (spent === budget) return 'good';
+  if (budget > 0 && spent / budget >= 0.7) return 'warn';
+  return 'neutral';
+}
+function getTotalBudget(period){
+  return Object.entries(categories)
+    .filter(([, cat]) => cat.periods.includes(period))
+    .reduce((sum, [, cat]) => sum + getCategoryBudget(cat, period), 0);
+}
+function getTotalSpent(period){
+  return Object.keys(categories)
+    .filter(catName => categories[catName].periods.includes(period))
+    .reduce((sum, catName) => sum + getCategorySpent(catName, period), 0);
+}
+function overallStatus(spent, budget){
+  if (spent === 0) return 'neutral';
+  if (spent > budget) return 'bad';
+  if (budget > 0 && spent / budget >= 0.9) return 'warn';
+  return 'good';
+}
+
+/* =========================================================
+   HELPERS: transactions & cash flow
+   ========================================================= */
+function getTransactionsForDay(day){
+  return transactions.filter(t => t.day === day).sort((a,b) => {
+    if (a.type === b.type) return 0;
+    return a.type === 'income' ? -1 : 1;
+  });
+}
+function getDailyNet(day){
+  return transactions.filter(t => t.day === day).reduce((sum,t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
+}
+function computeMonthlyBalances(numDays){
+  const balances = [];
+  let bal = startingBalance;
+  for (let d = 1; d <= numDays; d++){
+    transactions.filter(t => t.day === d).forEach(t => { bal += (t.type === 'income' ? t.amount : -t.amount); });
+    balances[d] = bal;
+  }
+  return balances;
+}
+function getUpcoming({ period = null, limit = 8 } = {}){
+  return transactions
+    .filter(t => !t.paid)
+    .filter(t => period === null || getPeriodForDay(t.day) === period)
+    .sort((a,b) => a.day - b.day)
+    .slice(0, limit);
+}
+
+/* =========================================================
+   TOGGLE (pure mutation, then caller decides what to refresh)
+   ========================================================= */
+function toggleTransactionPaid(id){
+  const t = transactions.find(x => x.id === id);
+  if (t) t.paid = !t.paid;
+}
+function handleToggleTransaction(id){
+  toggleTransactionPaid(id);
+  persist();
+  if (document.getElementById('dayDetailModal').classList.contains('show')) renderDayDetailContent();
+  render();
+}
+
+/* =========================================================
+   SCREEN SWITCHING
+   ========================================================= */
+function switchScreen(screen){
+  currentScreen = screen;
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.screen === screen));
+  document.getElementById('addFab').classList.toggle('show', screen === 'calendar');
+  render();
+}
+function switchPeriod(period){
+  currentPeriod = period;
+  persist();
+  render();
+}
+function render(){
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+  if (currentScreen === 'calendar') renderCalendarScreen(content);
+  else renderBudgetsScreen(content);
+}
+
+/* =========================================================
+   SHARED: transaction row (used by Next-up list, day detail,
+   and the Budgets accordion)
+   ========================================================= */
+function renderTxnRow(t, { showDayBadge = false } = {}){
+  const row = document.createElement('div');
+  row.className = 'due-row';
+  const isIncome = t.type === 'income';
+  const icon = isIncome ? '💰' : getCategoryIcon(t.categoryName);
+  row.innerHTML = `
+    ${showDayBadge ? `<div class="due-day-badge">Day ${t.day}</div>` : ''}
+    <div class="icon-badge sm">${icon}</div>
+    <div class="check ${t.paid ? 'checked' : ''}" role="button" tabindex="0" aria-label="Toggle ${escHtml(t.name)} ${isIncome ? 'received' : 'paid'}">${t.paid ? '✓' : ''}</div>
+    <div class="due-info">
+      <div class="due-name">${escHtml(t.name)}</div>
+      <div class="due-cat">${isIncome ? 'Income' : escHtml(t.categoryName || 'Uncategorized')}</div>
+    </div>
+    <div class="due-amount ${isIncome ? 'income' : ''}">${isIncome ? '+' : ''}${money(t.amount)}</div>
+  `;
+  row.querySelector('.check').addEventListener('click', (e) => { e.stopPropagation(); handleToggleTransaction(t.id); });
+  row.addEventListener('click', () => editTransaction(t.id));
+  return row;
+}
+
+/* =========================================================
+   RENDER: CALENDAR SCREEN
+   ========================================================= */
+function renderCalendarScreen(content){
+  const numDays = daysInMonth(viewYear, viewMonth);
+  const balances = computeMonthlyBalances(numDays);
+  const endBalance = balances[numDays];
+  const monthIncome = transactions.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
+  const monthExpense = transactions.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+  const endClass = endBalance < 0 ? 'bad' : endBalance < 200 ? 'warn' : 'good';
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="stat-strip">
+      <div class="stat-chip tap" onclick="openBalanceSettings()">
+        <div class="stat-chip-label">Start of month</div>
+        <div class="stat-chip-value">${money(startingBalance)}</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-chip-label">Projected end</div>
+        <div class="stat-chip-value ${endClass}">${money(endBalance)}</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-chip-label">In / Out</div>
+        <div class="stat-chip-value">${formatCompact(monthIncome)} / ${formatCompact(-monthExpense)}</div>
+      </div>
+    </div>
+    <div class="cal-nav">
+      <button class="icon-btn" aria-label="Previous month" onclick="navigateMonth(-1)">‹</button>
+      <div class="cal-month-label">${MONTH_NAMES[viewMonth]} ${viewYear}</div>
+      <button class="icon-btn" aria-label="Next month" onclick="navigateMonth(1)">›</button>
+    </div>
+    <div class="cal-weekdays">${['S','M','T','W','T','F','S'].map(d => `<div class="cal-weekday">${d}</div>`).join('')}</div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--good)"></span>Income day</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--warn)"></span>Balance getting low</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--bad)"></span>Projected negative</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--ink)"></span>Today</div>
+    </div>
+    <div class="section-title">Next up</div>
+    <div id="upcomingList"></div>
+  `;
+  content.appendChild(wrap);
+  renderCalGrid();
+  renderUpcomingList();
+}
+
+function navigateMonth(delta){
+  viewMonth += delta;
+  if (viewMonth < 0){ viewMonth = 11; viewYear--; }
+  if (viewMonth > 11){ viewMonth = 0; viewYear++; }
+  render();
+}
+
+function renderCalGrid(){
+  const grid = document.getElementById('calGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const numDays = daysInMonth(viewYear, viewMonth);
+  const offset = firstWeekday(viewYear, viewMonth);
+  const balances = computeMonthlyBalances(numDays);
+  const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
+
+  for (let i = 0; i < offset; i++){
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell empty';
+    grid.appendChild(cell);
+  }
+
+  for (let day = 1; day <= numDays; day++){
+    const period = getPeriodForDay(day);
+    const net = getDailyNet(day);
+    const bal = balances[day];
+    const healthClass = bal < 0 ? 'bal-bad' : bal < 200 ? 'bal-warn' : '';
+    const cell = document.createElement('div');
+    cell.className = `cal-cell ${healthClass}` + (isCurrentMonth && day === today.getDate() ? ' today' : '');
+    cell.innerHTML = `
+      <span class="period-dot p${period}"></span>
+      <div class="cal-daynum">${day}</div>
+      ${net !== 0 ? `<div class="cal-net ${net > 0 ? 'pos' : ''}">${formatCompact(net)}</div>` : ''}
+    `;
+    cell.addEventListener('click', () => openDayDetail(day));
+    grid.appendChild(cell);
+  }
+}
+
+function renderUpcomingList(){
+  const el = document.getElementById('upcomingList');
+  if (!el) return;
+  const items = getUpcoming({ limit: 8 });
+  if (items.length === 0){
+    el.innerHTML = `<div class="empty-note">Everything for this month is marked settled. Nice.</div>`;
+    return;
+  }
+  el.innerHTML = '';
+  items.forEach(t => el.appendChild(renderTxnRow(t, { showDayBadge: true })));
+}
+
+/* =========================================================
+   RENDER: DAY DETAIL MODAL
+   ========================================================= */
+function openDayDetail(day){
+  selectedDay = day;
+  document.getElementById('dayDetailTitle').textContent = `${MONTH_NAMES[viewMonth]} ${day} · Period ${getPeriodForDay(day) + 1}`;
+  renderDayDetailContent();
+  showModal('dayDetailModal');
+}
+function renderDayDetailContent(){
+  if (selectedDay === null) return;
+  const numDays = daysInMonth(viewYear, viewMonth);
+  const balances = computeMonthlyBalances(numDays);
+  document.getElementById('dayDetailBalance').textContent = `Projected balance after this day: ${money(balances[selectedDay])}`;
+  const list = document.getElementById('dayDetailList');
+  const items = getTransactionsForDay(selectedDay);
+  if (items.length === 0){
+    list.innerHTML = `<div class="empty-note">Nothing on the books for this day yet.</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(t => list.appendChild(renderTxnRow(t, { showDayBadge: false })));
+}
+function addFromDayDetail(){
+  const day = selectedDay;
+  closeModal('dayDetailModal');
+  openTransactionModal('expense', day);
+}
+
+/* =========================================================
+   RENDER: BUDGETS SCREEN
+   ========================================================= */
+function renderBudgetsScreen(content){
+  const period = currentPeriod;
+  const budget = getTotalBudget(period);
+  const spent = getTotalSpent(period);
+  const remaining = budget - spent;
+  const status = overallStatus(spent, budget);
+  const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="period-pills">
+      <button class="pill ${period===0?'active':''}" onclick="switchPeriod(0)">Period 1</button>
+      <button class="pill ${period===1?'active':''}" onclick="switchPeriod(1)">Period 2</button>
+    </div>
+    <div class="hero-card">
+      <div class="hero-label">Period ${period + 1} · Remaining</div>
+      <div class="hero-figure ${status}">${money(remaining)}</div>
+      <div class="hero-sub">${money(spent)} of ${money(budget)} spent</div>
+      <div class="progress-track"><div class="progress-fill ${status}" style="width:${pct}%"></div></div>
+    </div>
+    <div class="section-title">Categories</div>
+    <div id="categoryList"></div>
+  `;
+  content.appendChild(wrap);
+
+  const listEl = wrap.querySelector('#categoryList');
+  const names = Object.keys(categories).filter(n => categories[n].periods.includes(period));
+  if (names.length === 0){
+    listEl.innerHTML = `<div class="empty-note">No categories are active in this period yet.</div>`;
+  } else {
+    names.forEach(catName => listEl.appendChild(renderCategoryCard(catName, period)));
+  }
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-category-btn';
+  addBtn.textContent = '+ Add category';
+  addBtn.onclick = () => addCategory();
+  content.appendChild(addBtn);
+}
+
+function renderCategoryCard(catName, period){
+  const cat = categories[catName];
+  const budget = getCategoryBudget(cat, period);
+  const spent = getCategorySpent(catName, period);
+  const remaining = budget - spent;
+  const status = getCategoryStatus(catName, period);
+  const periodTag = cat.periods.length === 1 ? ` <span class="due-tag">P${cat.periods[0] + 1} only</span>` : '';
+  const isOpen = expandedCategory === catName;
+
+  const card = document.createElement('div');
+  card.className = 'ledger-card';
+  card.innerHTML = `
+    <div class="ledger-row">
+      <div class="ledger-tab ${status}"></div>
+      <div class="ledger-body">
+        <div class="ledger-header-row">
+          <div class="icon-badge">${getCategoryIcon(catName)}</div>
+          <div class="ledger-info">
+            <div class="ledger-name-row">
+              <div class="ledger-name">${escHtml(catName)}</div>${periodTag}
+            </div>
+            <div class="ledger-amounts">${money(spent)} of ${money(budget)} · ${money(remaining)} left</div>
+          </div>
+          <span class="chevron ${isOpen ? 'open' : ''}">▸</span>
+          <button class="gear-btn" aria-label="Edit ${escHtml(catName)}" onclick="editCategory('${escAttr(catName)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>
+        </div>
+      </div>
+    </div>
+    ${isOpen ? `<div class="txn-accordion"></div>` : ''}
+  `;
+  card.querySelector('.ledger-body').addEventListener('click', (e) => {
+    if (e.target.closest('.gear-btn')) return;
+    toggleCategoryExpand(catName);
+  });
+
+  if (isOpen){
+    const accordion = card.querySelector('.txn-accordion');
+    const txns = transactions
+      .filter(t => t.type === 'expense' && t.categoryName === catName && getPeriodForDay(t.day) === period)
+      .sort((a,b) => a.day - b.day);
+    if (txns.length === 0){
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.textContent = 'No transactions logged in this category yet for this period.';
+      accordion.appendChild(note);
+    } else {
+      txns.forEach(t => accordion.appendChild(renderTxnRow(t, { showDayBadge: true })));
+    }
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-btn';
+    addBtn.textContent = `+ Add to ${catName}`;
+    addBtn.onclick = (e) => { e.stopPropagation(); openTransactionModal('expense', null, catName); };
+    accordion.appendChild(addBtn);
+  }
+
+  return card;
+}
+
+function toggleCategoryExpand(catName){
+  expandedCategory = expandedCategory === catName ? null : catName;
+  render();
+}
+
+/* =========================================================
+   MODAL HELPERS
+   ========================================================= */
+function showModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+/* =========================================================
+   ICON PICKER
+   ========================================================= */
+function selectPresetIcon(elem, icon){
+  selectedIcon = icon;
+  document.querySelectorAll('#categoryIconPicker .icon-option').forEach(btn => btn.classList.toggle('active', btn === elem));
+  document.getElementById('categoryIconCustom').value = '';
+}
+function selectCustomIcon(value){
+  selectedIcon = value;
+  document.querySelectorAll('#categoryIconPicker .icon-option').forEach(btn => btn.classList.remove('active'));
+}
+function setIconState(icon){
+  selectedIcon = icon || '🧾';
+  let matched = false;
+  document.querySelectorAll('#categoryIconPicker .icon-option').forEach(btn => {
+    const isMatch = btn.textContent.trim() === selectedIcon;
+    btn.classList.toggle('active', isMatch);
+    if (isMatch) matched = true;
+  });
+  document.getElementById('categoryIconCustom').value = matched ? '' : selectedIcon;
+}
+
+/* =========================================================
+   CATEGORY: period selector + budget field visibility
+   ========================================================= */
+function selectCategoryPeriod(elem, type){
+  document.querySelectorAll('#categoryPeriodSelector .period-option').forEach(opt => opt.classList.remove('active'));
+  elem.classList.add('active');
+  if (type === 'both') selectedCategoryPeriods = [0, 1];
+  else if (type === 'p1') selectedCategoryPeriods = [0];
+  else selectedCategoryPeriods = [1];
+  updateCategoryBudgetFields();
+}
+function updateCategoryBudgetFields(){
+  const group2 = document.getElementById('categoryBudgetGroup2');
+  const label1 = document.getElementById('categoryBudgetLabel1');
+  if (selectedCategoryPeriods.length === 2){
+    group2.style.display = '';
+    label1.textContent = 'Budget (Period 1)';
+  } else {
+    group2.style.display = 'none';
+    label1.textContent = 'Budget per period';
+  }
+}
+function periodsToPillIndex(periods){
+  if (periods.length === 2) return 0;
+  return periods[0] === 0 ? 1 : 2;
+}
+function setCategoryPeriodPills(activeIndex){
+  document.querySelectorAll('#categoryPeriodSelector .period-option').forEach((opt,i) => opt.classList.toggle('active', i === activeIndex));
+}
+
+/* =========================================================
+   CATEGORY CRUD
+   ========================================================= */
+function addCategory(){
+  editingCategory = null;
+  document.getElementById('categoryModalTitle').textContent = 'Add category';
+  document.getElementById('categoryName').value = '';
+  document.getElementById('categoryName').disabled = false;
+  document.getElementById('categoryBudget1').value = '';
+  document.getElementById('categoryBudget2').value = '';
+  selectedCategoryPeriods = [0, 1];
+  setCategoryPeriodPills(0);
+  updateCategoryBudgetFields();
+  setIconState('🧾');
+  showModal('categoryModal');
+}
+
+function editCategory(catName){
+  const category = categories[catName];
+  if (!confirm(`Edit or delete "${catName}"?\n\nOK = Edit, Cancel = Delete`)){
+    const inUse = transactions.some(t => t.categoryName === catName);
+    if (inUse){
+      alert(`Can't delete ${catName} — it still has transactions logged against it. Remove or reassign those first.`);
+    } else if (confirm(`Delete "${catName}"?`)){
+      delete categories[catName];
+      persist();
+      render();
+    }
+    return;
+  }
+  editingCategory = catName;
+  document.getElementById('categoryModalTitle').textContent = `Edit ${catName}`;
+  document.getElementById('categoryName').value = catName;
+  document.getElementById('categoryName').disabled = true;
+  selectedCategoryPeriods = category.periods;
+  setCategoryPeriodPills(periodsToPillIndex(category.periods));
+  updateCategoryBudgetFields();
+  if (Array.isArray(category.budget)){
+    document.getElementById('categoryBudget1').value = category.budget[0];
+    document.getElementById('categoryBudget2').value = category.budget[1];
+  } else {
+    document.getElementById('categoryBudget1').value = category.budget;
+    document.getElementById('categoryBudget2').value = category.budget;
+  }
+  setIconState(category.icon);
+  showModal('categoryModal');
+}
+
+function cancelCategoryModal(){
+  closeModal('categoryModal');
+  returningToTransactionModal = false;
+  txnDraft = null;
+}
+
+function saveCategory(){
+  const name = document.getElementById('categoryName').value.trim();
+  const b1 = parseFloat(document.getElementById('categoryBudget1').value);
+  const b2raw = document.getElementById('categoryBudget2').value;
+  const b2 = b2raw === '' ? b1 : parseFloat(b2raw);
+
+  if (!name || !b1 || b1 <= 0){
+    alert('Please enter a valid name and budget.');
+    return;
+  }
+  if (!editingCategory && categories[name]){
+    alert('A category with that name already exists.');
+    return;
+  }
+
+  const budget = selectedCategoryPeriods.length === 2 && b1 !== b2 ? [b1, b2] : b1;
+  categories[name] = { icon: selectedIcon || '🧾', periods: selectedCategoryPeriods, budget };
+  persist();
+  closeModal('categoryModal');
+
+  if (returningToTransactionModal){
+    returningToTransactionModal = false;
+    const draft = txnDraft;
+    txnDraft = null;
+    openTransactionModal(draft.type, draft.day, name);
+    document.getElementById('txnName').value = draft.name;
+    document.getElementById('txnAmount').value = draft.amount;
+    if (draft.day) document.getElementById('txnDay').value = draft.day;
+    setTxnPaidField(draft.paid);
+  } else {
+    render();
+  }
+}
+
+/* =========================================================
+   TRANSACTION CRUD
+   ========================================================= */
+function openTransactionModal(type, day, presetCategory){
+  editingTransactionId = null;
+  currentTxnType = type || 'expense';
+  document.getElementById('transactionModalTitle').textContent = 'Add a transaction';
+  document.querySelectorAll('#typePills .type-option').forEach((opt,i) => opt.classList.toggle('active', (i === 0) === (currentTxnType === 'expense')));
+  document.getElementById('txnCategoryGroup').style.display = currentTxnType === 'expense' ? '' : 'none';
+  document.getElementById('txnNameLabel').textContent = currentTxnType === 'income' ? 'Source' : 'Name';
+  document.getElementById('txnPaidLabel').textContent = currentTxnType === 'income' ? 'Already received' : 'Already paid';
+  document.getElementById('txnName').value = '';
+  document.getElementById('txnAmount').value = '';
+  document.getElementById('txnDay').value = day || '';
+  setTxnPaidField(false);
+  document.getElementById('txnDeleteBtn').style.display = 'none';
+  populateCategorySelect(presetCategory);
+  showModal('transactionModal');
+}
+
+function selectTxnType(elem, type){
+  document.querySelectorAll('#typePills .type-option').forEach(opt => opt.classList.remove('active'));
+  elem.classList.add('active');
+  currentTxnType = type;
+  document.getElementById('txnCategoryGroup').style.display = type === 'expense' ? '' : 'none';
+  document.getElementById('txnNameLabel').textContent = type === 'income' ? 'Source' : 'Name';
+  document.getElementById('txnPaidLabel').textContent = type === 'income' ? 'Already received' : 'Already paid';
+}
+
+function populateCategorySelect(presetCategory){
+  const sel = document.getElementById('txnCategory');
+  const names = Object.keys(categories);
+  sel.innerHTML = names.map(n => `<option value="${escHtml(n)}">${getCategoryIcon(n)} ${escHtml(n)}</option>`).join('')
+    + `<option value="__new__">+ New category…</option>`;
+  sel.value = (presetCategory && names.includes(presetCategory)) ? presetCategory : (names[0] || '__new__');
+}
+
+function handleCategorySelectChange(){
+  const sel = document.getElementById('txnCategory');
+  if (sel.value === '__new__'){
+    txnDraft = {
+      type: currentTxnType,
+      name: document.getElementById('txnName').value,
+      amount: document.getElementById('txnAmount').value,
+      day: document.getElementById('txnDay').value,
+      paid: document.getElementById('txnPaidCheck').classList.contains('checked')
+    };
+    returningToTransactionModal = true;
+    closeModal('transactionModal');
+    addCategory();
+  }
+}
+
+function toggleTxnPaidField(){
+  setTxnPaidField(!document.getElementById('txnPaidCheck').classList.contains('checked'));
+}
+function setTxnPaidField(val){
+  const el = document.getElementById('txnPaidCheck');
+  el.classList.toggle('checked', val);
+  el.innerHTML = val ? '✓' : '';
+}
+
+function editTransaction(id){
+  const t = transactions.find(x => x.id === id);
+  if (!t) return;
+  if (document.getElementById('dayDetailModal').classList.contains('show')) closeModal('dayDetailModal');
+  editingTransactionId = id;
+  currentTxnType = t.type;
+  document.getElementById('transactionModalTitle').textContent = 'Edit transaction';
+  document.querySelectorAll('#typePills .type-option').forEach((opt,i) => opt.classList.toggle('active', (i === 0) === (t.type === 'expense')));
+  document.getElementById('txnCategoryGroup').style.display = t.type === 'expense' ? '' : 'none';
+  document.getElementById('txnNameLabel').textContent = t.type === 'income' ? 'Source' : 'Name';
+  document.getElementById('txnPaidLabel').textContent = t.type === 'income' ? 'Already received' : 'Already paid';
+  document.getElementById('txnName').value = t.name;
+  document.getElementById('txnAmount').value = t.amount;
+  document.getElementById('txnDay').value = t.day;
+  setTxnPaidField(t.paid);
+  document.getElementById('txnDeleteBtn').style.display = '';
+  populateCategorySelect(t.categoryName);
+  showModal('transactionModal');
+}
+
+function saveTransaction(){
+  const name = document.getElementById('txnName').value.trim();
+  const amount = parseFloat(document.getElementById('txnAmount').value);
+  const day = parseInt(document.getElementById('txnDay').value, 10);
+  const paid = document.getElementById('txnPaidCheck').classList.contains('checked');
+  const categoryName = currentTxnType === 'expense' ? document.getElementById('txnCategory').value : null;
+
+  if (!name || !amount || amount <= 0){
+    alert('Please enter a valid name and amount.');
+    return;
+  }
+  if (!day || day < 1 || day > 31){
+    alert('Please enter a day between 1 and 31.');
+    return;
+  }
+  if (currentTxnType === 'expense' && (!categoryName || categoryName === '__new__')){
+    alert('Please choose a category.');
+    return;
+  }
+
+  if (editingTransactionId){
+    const t = transactions.find(x => x.id === editingTransactionId);
+    t.type = currentTxnType; t.name = name; t.amount = amount; t.day = day; t.paid = paid;
+    t.categoryName = currentTxnType === 'expense' ? categoryName : null;
+  } else {
+    transactions.push({ id: 't' + Math.random().toString(36).slice(2,10), type: currentTxnType, name, amount, day, paid, categoryName });
+  }
+  persist();
+  closeModal('transactionModal');
+  render();
+}
+
+function deleteTransaction(){
+  if (!editingTransactionId) return;
+  if (!confirm('Delete this transaction?')) return;
+  transactions = transactions.filter(t => t.id !== editingTransactionId);
+  persist();
+  closeModal('transactionModal');
+  render();
+}
+
+/* =========================================================
+   THEME
+   ========================================================= */
+function changeTheme(theme){
+  currentTheme = theme;
+  document.body.setAttribute('data-theme', theme);
+  const swatch = { light:'#F7F4EE', dark:'#17191D', blue:'#EBF2F6', green:'#EAF2EA', rose:'#FBF1F0' }[theme] || '#FBF1F0';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', swatch);
+  document.getElementById('brandMark').textContent = theme === 'rose' ? '❀' : '📖';
+  persist();
+  closeModal('themeModal');
+  closeModal('settingsModal');
+}
+
+/* =========================================================
+   FONT STYLE & TEXT SIZE
+   ========================================================= */
+function changeFont(fontKey){
+  currentFont = fontKey;
+  customFontFamily = null;
+  document.body.style.removeProperty('--font-display');
+  document.body.style.removeProperty('--font-body');
+  document.body.setAttribute('data-font', fontKey);
+  persist();
+  closeModal('fontModal');
+  closeModal('settingsModal');
+}
+function openFontModal(){
+  closeModal('settingsModal');
+  document.getElementById('fontSearchInput').value = '';
+  document.getElementById('fontSearchResults').style.display = 'none';
+  document.getElementById('fontSearchResults').innerHTML = '';
+  updateCustomFontIndicator();
+  showModal('fontModal');
+}
+function updateCustomFontIndicator(){
+  const row = document.getElementById('customFontActiveRow');
+  if (customFontFamily){
+    row.style.display = 'flex';
+    document.getElementById('customFontActiveName').textContent = customFontFamily;
+  } else {
+    row.style.display = 'none';
+  }
+}
+function handleFontSearch(query){
+  const resultsEl = document.getElementById('fontSearchResults');
+  const q = query.trim().toLowerCase();
+  if (!q){ resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
+  const matches = GOOGLE_FONTS.filter(f => f.toLowerCase().includes(q)).slice(0, 8);
+  resultsEl.style.display = '';
+  if (matches.length === 0){
+    resultsEl.innerHTML = `<div class="empty-note" style="padding:12px;">No matches — try a different spelling.</div>`;
+    return;
+  }
+  resultsEl.innerHTML = matches.map(f => `
+    <div class="settings-row" onclick="selectCustomFont('${escAttr(f)}')">
+      <div class="settings-row-label">${escHtml(f)}</div>
+      <div class="settings-chevron">+</div>
+    </div>
+  `).join('');
+}
+function loadGoogleFont(fontName){
+  let link = document.getElementById('customFontLink');
+  if (!link){
+    link = document.createElement('link');
+    link.id = 'customFontLink';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  }
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g, '+')}:wght@400;500;600;700&display=swap`;
+}
+function setCustomFontUI(fontName){
+  loadGoogleFont(fontName);
+  const stack = `'${fontName.replace(/"/g, '')}', sans-serif`;
+  document.body.style.setProperty('--font-display', stack);
+  document.body.style.setProperty('--font-body', stack);
+}
+function selectCustomFont(fontName){
+  customFontFamily = fontName;
+  setCustomFontUI(fontName);
+  updateCustomFontIndicator();
+  document.getElementById('fontSearchInput').value = '';
+  document.getElementById('fontSearchResults').style.display = 'none';
+  document.getElementById('fontSearchResults').innerHTML = '';
+  persist();
+}
+function clearCustomFont(){
+  customFontFamily = null;
+  document.body.style.removeProperty('--font-display');
+  document.body.style.removeProperty('--font-body');
+  document.body.setAttribute('data-font', currentFont);
+  updateCustomFontIndicator();
+  persist();
+}
+function changeTextSize(px, elem){
+  currentTextSize = px;
+  document.querySelectorAll('#sizeModal .period-option').forEach(opt => opt.classList.toggle('active', opt === elem));
+  document.documentElement.style.fontSize = px + 'px';
+  persist();
+  closeModal('sizeModal');
+  closeModal('settingsModal');
+}
+function openSizeModal(){
+  closeModal('settingsModal');
+  const sizeToIndex = { 15:0, 16:1, 18:2, 20:3 };
+  const idx = sizeToIndex[currentTextSize] ?? 1;
+  document.querySelectorAll('#sizeModal .period-option').forEach((opt,i) => opt.classList.toggle('active', i === idx));
+  showModal('sizeModal');
+}
+
+/* =========================================================
+   BACKGROUND IMAGE
+   ========================================================= */
+function renderBackgroundLayers(imageVal, opacityVal){
+  document.getElementById('bgImageLayer').style.backgroundImage = imageVal ? `url("${imageVal}")` : 'none';
+  document.getElementById('bgOverlay').style.opacity = opacityVal;
+  document.body.classList.toggle('has-bg', !!imageVal);
+}
+function applyBackground(){ renderBackgroundLayers(backgroundImage, backgroundOpacity); }
+function previewBackgroundLive(){ renderBackgroundLayers(pendingBgImage, pendingBgOpacity); updateBgPreview(); }
+
+function openBackgroundModal(){
+  closeModal('settingsModal');
+  pendingBgImage = backgroundImage;
+  pendingBgOpacity = backgroundOpacity;
+  document.getElementById('bgUrlInput').value = (backgroundImage && !backgroundImage.startsWith('data:')) ? backgroundImage : '';
+  document.getElementById('bgOpacityInput').value = Math.round(backgroundOpacity * 100);
+  document.getElementById('bgOpacityValue').textContent = Math.round(backgroundOpacity * 100) + '%';
+  updateBgPreview();
+  showModal('backgroundModal');
+}
+function updateBgPreview(){
+  const group = document.getElementById('bgPreviewGroup');
+  const box = document.getElementById('bgPreviewBox');
+  if (pendingBgImage){
+    group.style.display = '';
+    box.style.backgroundImage = `url("${pendingBgImage}")`;
+  } else {
+    group.style.display = 'none';
+  }
+}
+function handleBgFileSelect(event){
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')){
+    alert('Please choose an image file.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > MAX_BG_DIMENSION || height > MAX_BG_DIMENSION){
+        const scale = MAX_BG_DIMENSION / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      pendingBgImage = canvas.toDataURL('image/jpeg', BG_JPEG_QUALITY);
+      previewBackgroundLive();
+    };
+    img.onerror = () => alert("Couldn't read that image.");
+    img.src = e.target.result;
+  };
+  reader.onerror = () => alert("Couldn't read that file.");
+  reader.readAsDataURL(file);
+}
+function useBgUrl(){
+  const url = document.getElementById('bgUrlInput').value.trim();
+  if (!url){ alert('Paste an image URL first.'); return; }
+  pendingBgImage = url;
+  previewBackgroundLive();
+}
+function previewBgOpacity(val){
+  pendingBgOpacity = val / 100;
+  document.getElementById('bgOpacityValue').textContent = Math.round(val) + '%';
+  previewBackgroundLive();
+}
+function cancelBackgroundModal(){
+  applyBackground(); // revert any live preview to the last saved state
+  closeModal('backgroundModal');
+}
+async function removeBackground(){
+  pendingBgImage = null;
+  pendingBgOpacity = 0.8;
+  backgroundImage = null;
+  backgroundOpacity = 0.8;
+  applyBackground();
+  await persistBackground();
+  closeModal('backgroundModal');
+}
+async function saveBackground(){
+  backgroundImage = pendingBgImage;
+  backgroundOpacity = pendingBgOpacity;
+  applyBackground();
+  const ok = await persistBackground();
+  if (ok){
+    closeModal('backgroundModal');
+  } else {
+    alert("Couldn't save that background — it might be too large. Try a smaller image, or a web URL instead.");
+  }
+}
+
+/* =========================================================
+   PAY PERIOD & STARTING BALANCE SETTINGS
+   ========================================================= */
+function openPeriodSettings(){
+  closeModal('settingsModal');
+  document.getElementById('periodSplitInput').value = periodSplitDay - 1;
+  showModal('periodModal');
+}
+function savePeriodSettings(){
+  const raw = parseInt(document.getElementById('periodSplitInput').value, 10);
+  if (!raw || raw < 1 || raw > 30){
+    alert('Enter a day between 1 and 30.');
+    return;
+  }
+  periodSplitDay = raw + 1;
+  persist();
+  closeModal('periodModal');
+  render();
+}
+function openBalanceSettings(){
+  closeModal('settingsModal');
+  document.getElementById('balanceInput').value = startingBalance;
+  showModal('balanceModal');
+}
+function saveBalanceSettings(){
+  const raw = parseFloat(document.getElementById('balanceInput').value);
+  if (isNaN(raw)){
+    alert('Enter a valid amount.');
+    return;
+  }
+  startingBalance = raw;
+  persist();
+  closeModal('balanceModal');
+  render();
+}
+
+/* =========================================================
+   EXPORT / IMPORT
+   ========================================================= */
+function exportToMarkdown(){
+  let md = `# Ledger Export\n*Generated: ${new Date().toLocaleString()}*\n\n`;
+  md += `## Monthly summary\n- **Starting balance**: ${money(startingBalance)}\n\n---\n\n`;
+  [0, 1].forEach(period => {
+    md += `\n## Period ${period + 1}\n\n`;
+    Object.keys(categories).forEach(catName => {
+      const cat = categories[catName];
+      if (!cat.periods.includes(period)) return;
+      const budget = getCategoryBudget(cat, period);
+      const spent = getCategorySpent(catName, period);
+      md += `### ${catName} — ${money(budget)}\n*Spent: ${money(spent)} | Remaining: ${money(budget - spent)}*\n\n`;
+      transactions.filter(t => t.type === 'expense' && t.categoryName === catName && getPeriodForDay(t.day) === period)
+        .sort((a,b) => a.day - b.day)
+        .forEach(t => { md += `- ${t.paid ? '[x]' : '[ ]'} Day ${t.day} — ${t.name}: ${money(t.amount)}\n`; });
+      md += '\n';
+    });
+    md += `### Income\n`;
+    transactions.filter(t => t.type === 'income' && getPeriodForDay(t.day) === period)
+      .sort((a,b) => a.day - b.day)
+      .forEach(t => { md += `- ${t.paid ? '[x]' : '[ ]'} Day ${t.day} — ${t.name}: ${money(t.amount)}\n`; });
+  });
+  downloadFile(md, `ledger_export_${Date.now()}.md`, 'text/markdown');
+  closeModal('settingsModal');
+}
+function exportToJSON(){
+  const payload = JSON.stringify({ categories, transactions, theme: currentTheme, font: currentFont, customFont: customFontFamily, textSize: currentTextSize, periodSplitDay, startingBalance }, null, 2);
+  downloadFile(payload, `ledger_backup_${Date.now()}.json`, 'application/json');
+  closeModal('settingsModal');
+}
+function downloadFile(text, filename, mime){
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importFromJSON(){
+  const raw = document.getElementById('importText').value.trim();
+  if (!raw){ alert('Paste some JSON first.'); return; }
+  let parsed;
+  try{ parsed = JSON.parse(raw); }catch(e){ alert("That doesn't look like valid JSON."); return; }
+  if (!parsed || !parsed.categories || !parsed.transactions){
+    alert("Couldn't find category/transaction data in that JSON.");
+    return;
+  }
+  categories = parsed.categories;
+  transactions = parsed.transactions;
+  if (parsed.periodSplitDay) periodSplitDay = parsed.periodSplitDay;
+  if (typeof parsed.startingBalance === 'number') startingBalance = parsed.startingBalance;
+  if (parsed.font){ currentFont = parsed.font; document.body.setAttribute('data-font', parsed.font); }
+  if (typeof parsed.textSize === 'number'){ currentTextSize = parsed.textSize; document.documentElement.style.fontSize = parsed.textSize + 'px'; }
+  if (parsed.customFont){ customFontFamily = parsed.customFont; setCustomFontUI(parsed.customFont); }
+  if (parsed.theme) changeTheme(parsed.theme);
+  persist();
+  closeModal('importModal');
+  closeModal('settingsModal');
+  document.getElementById('importText').value = '';
+  render();
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+(async function init(){
+  const [saved, savedBg] = await Promise.all([loadState(), loadBackground()]);
+  if (saved){
+    if (saved.categories) categories = saved.categories;
+    if (saved.transactions) transactions = saved.transactions;
+    if (saved.theme) currentTheme = saved.theme;
+    if (saved.font) currentFont = saved.font;
+    if (saved.customFont) customFontFamily = saved.customFont;
+    if (typeof saved.textSize === 'number') currentTextSize = saved.textSize;
+    if (saved.periodSplitDay) periodSplitDay = saved.periodSplitDay;
+    if (typeof saved.startingBalance === 'number') startingBalance = saved.startingBalance;
+    if (typeof saved.currentPeriod === 'number') currentPeriod = saved.currentPeriod;
+  }
+  if (savedBg){
+    if (savedBg.backgroundImage) backgroundImage = savedBg.backgroundImage;
+    if (typeof savedBg.backgroundOpacity === 'number') backgroundOpacity = savedBg.backgroundOpacity;
+  }
+  document.body.setAttribute('data-theme', currentTheme);
+  document.body.setAttribute('data-font', currentFont);
+  if (customFontFamily) setCustomFontUI(customFontFamily);
+  document.documentElement.style.fontSize = currentTextSize + 'px';
+  document.getElementById('brandMark').textContent = currentTheme === 'rose' ? '❀' : '📖';
+  const swatch = { light:'#F7F4EE', dark:'#17191D', blue:'#EBF2F6', green:'#EAF2EA', rose:'#FBF1F0' }[currentTheme] || '#FBF1F0';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', swatch);
+  applyBackground();
+  document.getElementById('addFab').classList.toggle('show', currentScreen === 'calendar');
+  render();
+  if (!saved) persist();
+})();
+</script>
+</body>
+</html>
