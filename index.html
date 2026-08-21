@@ -197,6 +197,10 @@
   .strategy-sub{ font-size:calc(11/16*1rem); color:var(--ink-muted); margin-bottom:10px; }
   .strategy-stat{ font-family:var(--font-mono); font-size:calc(12.5/16*1rem); margin-bottom:4px; }
   .strategy-order{ font-size:calc(11.5/16*1rem); color:var(--ink-muted); margin-top:8px; line-height:1.5; }
+  .group-summary{ background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:12px; }
+  .group-summary-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .group-summary-label{ font-size:calc(12/16*1rem); color:var(--ink-muted); }
+  .group-summary-total{ font-family:var(--font-mono); font-weight:600; font-size:calc(15/16*1rem); }
   .hero-label{ font-size:calc(12/16*1rem); text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--ink-muted); }
   .hero-figure{ font-family:var(--font-mono); font-size:calc(34/16*1rem); font-weight:600; margin:6px 0 2px; font-variant-numeric:tabular-nums; }
   .hero-figure.good{ color:var(--good); } .hero-figure.warn{ color:var(--warn); } .hero-figure.bad{ color:var(--bad); }
@@ -453,6 +457,19 @@
         </div>
       </div>
       <div class="form-hint">The budget above is what you're actually paying each month — that's what payoff projections use. The minimum here is just for comparison, in case you're paying more than required.</div>
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">Group</label>
+        <input type="text" class="form-input" id="debtGroup" placeholder="e.g. Credit Cards">
+        <div class="icon-picker" id="debtGroupChips" style="margin-top:8px;"></div>
+        <div class="form-hint">Debts in the same group get their own combined total and payoff plan.</div>
+      </div>
+      <div class="form-group">
+        <div class="check-row">
+          <div class="check" id="debtAutoApplyCheck" role="button" tabindex="0" onclick="toggleDebtAutoApply()"></div>
+          <label>Subtract payments from the balance automatically</label>
+        </div>
+        <div class="form-hint">When on, checking off a payment lowers this balance by the principal (payment minus that month's interest). Turn off to keep the balance fully manual. You can always edit the balance by hand either way.</div>
+      </div>
     </div>
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="cancelCategoryModal()">Cancel</button>
@@ -1047,6 +1064,61 @@ function overallStatus(spent, budget){
 function getDebtCategoryNames(){
   return categoryOrder.filter(n => categories[n] && categories[n].debt);
 }
+function getDebtGroupNames(){
+  const seen = [];
+  getDebtCategoryNames().forEach(n => {
+    const g = categories[n].debt.group || 'Other debts';
+    if (!seen.includes(g)) seen.push(g);
+  });
+  return seen;
+}
+/* --- Applying payments to balances -------------------------------
+   When a payment is checked off, the principal portion comes off the
+   balance (payment minus that month's interest). Each application is
+   recorded against transaction-id + month, so unchecking reverses it
+   exactly and re-checking can never double-count. Per-debt autoApply
+   can be turned off to go back to purely manual balances. */
+function debtPaymentKey(txnId, year, month){ return `${txnId}|${monthKey(year, month)}`; }
+function applyDebtPayment(t, year, month){
+  if (t.type !== 'expense' || !t.categoryName) return;
+  const cat = categories[t.categoryName];
+  if (!cat || !cat.debt || cat.debt.autoApply === false) return;
+  const debt = cat.debt;
+  if (!Array.isArray(debt.appliedPayments)) debt.appliedPayments = [];
+  const key = debtPaymentKey(t.id, year, month);
+  if (debt.appliedPayments.some(a => a.key === key)) return;
+  if (debt.currentBalance <= 0) return;
+  const interest = debt.currentBalance * (debt.apr / 100 / 12);
+  const principal = Math.max(0, Math.min(t.amount - interest, debt.currentBalance));
+  debt.currentBalance = Math.round((debt.currentBalance - principal) * 100) / 100;
+  debt.appliedPayments.push({
+    key, principal: Math.round(principal * 100) / 100,
+    interest: Math.round(interest * 100) / 100, payment: t.amount
+  });
+}
+function unapplyDebtPayment(t, year, month){
+  if (!t.categoryName) return;
+  const cat = categories[t.categoryName];
+  if (!cat || !cat.debt || !Array.isArray(cat.debt.appliedPayments)) return;
+  const debt = cat.debt;
+  const key = debtPaymentKey(t.id, year, month);
+  const idx = debt.appliedPayments.findIndex(a => a.key === key);
+  if (idx === -1) return;
+  debt.currentBalance = Math.round((debt.currentBalance + debt.appliedPayments[idx].principal) * 100) / 100;
+  debt.appliedPayments.splice(idx, 1);
+}
+function unapplyAllForTransaction(txnId){
+  Object.values(categories).forEach(cat => {
+    if (!cat.debt || !Array.isArray(cat.debt.appliedPayments)) return;
+    const keep = [];
+    cat.debt.appliedPayments.forEach(a => {
+      if (a.key.split('|')[0] === txnId){
+        cat.debt.currentBalance = Math.round((cat.debt.currentBalance + a.principal) * 100) / 100;
+      } else keep.push(a);
+    });
+    cat.debt.appliedPayments = keep;
+  });
+}
 function getMonthlyDebtPayment(catName){
   const cat = categories[catName];
   return cat.periods.reduce((sum, p) => sum + getCategoryBudget(cat, p), 0);
@@ -1214,7 +1286,10 @@ function handleToggleTransaction(id, ctxYear, ctxMonth){
   const year = ctxYear != null ? ctxYear : today.getFullYear();
   const month = ctxMonth != null ? ctxMonth : today.getMonth();
   pushUndoSnapshot();
-  setPaidForMonth(t, year, month, !isPaidForMonth(t, year, month));
+  const nowPaid = !isPaidForMonth(t, year, month);
+  setPaidForMonth(t, year, month, nowPaid);
+  if (nowPaid) applyDebtPayment(t, year, month);
+  else unapplyDebtPayment(t, year, month);
   persist();
   if (document.getElementById('dayDetailModal').classList.contains('show')) renderDayDetailContent();
   render();
@@ -1635,61 +1710,86 @@ function renderDebtsScreen(content){
         <div class="stat-chip-value ${projectedExtra > 0 ? 'good' : ''}">${money(projectedExtra)}</div>
       </div>
     </div>
-    <div class="section-title">Your debts</div>
-    <div id="debtCardList"></div>
   `;
   content.appendChild(wrap);
 
-  const listEl = wrap.querySelector('#debtCardList');
-  debtNames.forEach(name => {
-    const debt = categories[name].debt;
-    const percent = getDebtPercent(debt);
-    const card = document.createElement('div');
-    card.className = 'debt-card';
-    card.innerHTML = `
-      <div class="debt-card-top">
-        ${renderTreeSVG(percent)}
-        <div class="debt-info-main">
-          <div class="debt-name-row">
-            <div class="icon-badge sm">${getCategoryIcon(name)}</div>
-            <div class="debt-name">${escHtml(name)}</div>
-          </div>
-          <div class="debt-milestone">${getDebtMilestoneLabel(percent)} · ${percent.toFixed(0)}% paid off</div>
-          <div class="debt-balance"><span class="remaining">${money(debt.currentBalance)}</span> <span class="orig">of ${money(debt.originalBalance)}</span></div>
-          <div class="debt-progress-track"><div class="debt-progress-fill" style="width:${percent}%"></div></div>
+  getDebtGroupNames().forEach((groupName, gi) => {
+    const names = debtNames.filter(n => (categories[n].debt.group || 'Other debts') === groupName);
+    const gRemaining = names.reduce((s,n) => s + categories[n].debt.currentBalance, 0);
+    const gOriginal = names.reduce((s,n) => s + categories[n].debt.originalBalance, 0);
+    const gPct = gOriginal > 0 ? ((gOriginal - gRemaining) / gOriginal) * 100 : 0;
+
+    const section = document.createElement('div');
+    section.innerHTML = `
+      <div class="section-title">${escHtml(groupName)}</div>
+      <div class="group-summary">
+        <div class="group-summary-row">
+          <div class="group-summary-label">${names.length} debt${names.length === 1 ? '' : 's'} · ${gPct.toFixed(0)}% paid off</div>
+          <div class="group-summary-total">${money(gRemaining)}</div>
         </div>
+        <div class="debt-progress-track"><div class="debt-progress-fill" style="width:${gPct}%"></div></div>
       </div>
     `;
-    card.addEventListener('click', () => openDebtDetail(name));
-    listEl.appendChild(card);
+    content.appendChild(section);
+
+    names.forEach(name => {
+      const debt = categories[name].debt;
+      const percent = getDebtPercent(debt);
+      const card = document.createElement('div');
+      card.className = 'debt-card';
+      card.innerHTML = `
+        <div class="debt-card-top">
+          ${renderTreeSVG(percent)}
+          <div class="debt-info-main">
+            <div class="debt-name-row">
+              <div class="icon-badge sm">${getCategoryIcon(name)}</div>
+              <div class="debt-name">${escHtml(name)}</div>
+              ${debt.autoApply === false ? '<span class="due-tag">manual</span>' : ''}
+            </div>
+            <div class="debt-milestone">${getDebtMilestoneLabel(percent)} · ${percent.toFixed(0)}% paid off</div>
+            <div class="debt-balance"><span class="remaining">${money(debt.currentBalance)}</span> <span class="orig">of ${money(debt.originalBalance)}</span></div>
+            <div class="debt-progress-track"><div class="debt-progress-fill" style="width:${percent}%"></div></div>
+          </div>
+        </div>
+      `;
+      card.addEventListener('click', () => openDebtDetail(name));
+      content.appendChild(card);
+    });
+
+    if (names.length >= 2){
+      const compareSection = document.createElement('div');
+      compareSection.innerHTML = `
+        <div class="form-group">
+          <label class="form-label">Extra per month toward ${escHtml(groupName)}</label>
+          <input type="number" class="form-input" id="debtExtraInput-${gi}" value="${gi === 0 ? Math.round(projectedExtra) : 0}" step="10" min="0" oninput="renderStrategyComparison(${gi}, '${escAttr(groupName)}')">
+        </div>
+        <div class="strategy-compare" id="strategyCompare-${gi}"></div>
+      `;
+      content.appendChild(compareSection);
+      renderStrategyComparison(gi, groupName);
+    }
   });
 
-  if (debtNames.length >= 2){
-    const compareSection = document.createElement('div');
-    compareSection.innerHTML = `
-      <div class="section-title">Compare payoff strategies</div>
-      <div class="form-group">
-        <label class="form-label">Extra to put toward debt each month</label>
-        <input type="number" class="form-input" id="debtExtraInput" value="${Math.round(projectedExtra)}" step="10" min="0" oninput="renderStrategyComparison()">
-        <div class="form-hint">Defaults to what's projected left over this month on your Calendar tab — adjust to try other amounts.</div>
-      </div>
-      <div class="strategy-compare" id="strategyCompare"></div>
-    `;
-    content.appendChild(compareSection);
-    renderStrategyComparison();
-  }
+  const hint = document.createElement('div');
+  hint.className = 'form-hint';
+  hint.style.marginTop = '14px';
+  hint.textContent = 'The "could apply" figure comes from what your Calendar tab projects you\'ll have left over this month.';
+  content.appendChild(hint);
 }
-function getDebtSimInputs(){
-  return getDebtCategoryNames().map(name => ({
-    name, balance: categories[name].debt.currentBalance, apr: categories[name].debt.apr,
-    minPayment: getMonthlyDebtPayment(name)
-  }));
+function getDebtSimInputs(groupName){
+  return getDebtCategoryNames()
+    .filter(n => groupName == null || (categories[n].debt.group || 'Other debts') === groupName)
+    .map(name => ({
+      name, balance: categories[name].debt.currentBalance, apr: categories[name].debt.apr,
+      minPayment: getMonthlyDebtPayment(name)
+    }));
 }
-function renderStrategyComparison(){
-  const el = document.getElementById('strategyCompare');
-  if (!el) return;
-  const extra = Math.max(0, parseFloat(document.getElementById('debtExtraInput').value) || 0);
-  const debts = getDebtSimInputs();
+function renderStrategyComparison(gi, groupName){
+  const el = document.getElementById(`strategyCompare-${gi}`);
+  const input = document.getElementById(`debtExtraInput-${gi}`);
+  if (!el || !input) return;
+  const extra = Math.max(0, parseFloat(input.value) || 0);
+  const debts = getDebtSimInputs(groupName);
   const snow = simulateStrategy(debts, extra, 'snowball');
   const ava = simulateStrategy(debts, extra, 'avalanche');
   const snowWins = snow.allPaidOff && ava.allPaidOff && snow.totalInterest < ava.totalInterest;
@@ -1750,7 +1850,16 @@ function renderDebtDetailContent(){
         <button class="btn btn-secondary" style="width:100%;" onclick="saveDebtBalanceUpdate()">Update</button>
       </div>
     </div>
+    <div class="form-hint" style="margin-top:-6px; margin-bottom:14px;">
+      ${debt.autoApply === false
+        ? 'Payments are <strong>not</strong> applied automatically — this balance only changes when you edit it here.'
+        : "Checked-off payments reduce this balance automatically. Editing it here overrides that at any time."}
+    </div>
 
+    <div class="due-row" style="cursor:default; margin-bottom:8px;">
+      <div class="due-info"><div class="due-name">Group</div></div>
+      <div class="due-amount">${escHtml(debt.group || 'Other debts')}</div>
+    </div>
     <div class="due-row" style="cursor:default; margin-bottom:8px;">
       <div class="due-info"><div class="due-name">Original balance</div></div>
       <div class="due-amount">${money(debt.originalBalance)}</div>
@@ -1763,6 +1872,18 @@ function renderDebtDetailContent(){
       <div class="due-info"><div class="due-name">Monthly payment (from budget)</div></div>
       <div class="due-amount">${money(payment)}</div>
     </div>
+
+    ${(Array.isArray(debt.appliedPayments) && debt.appliedPayments.length)
+      ? `<div class="section-title" style="margin-top:0;">Payments applied</div>
+         ${debt.appliedPayments.slice(-4).reverse().map(a => `
+           <div class="due-row" style="cursor:default; margin-bottom:6px;">
+             <div class="due-info">
+               <div class="due-name">${escHtml(a.key.split('|')[1])}</div>
+               <div class="due-cat">${money(a.interest)} interest · ${money(a.principal)} to principal</div>
+             </div>
+             <div class="due-amount">${money(a.payment)}</div>
+           </div>`).join('')}`
+      : ''}
 
     <div class="section-title" style="margin-top:0;">At this pace</div>
     <div class="hero-sub">${base.neverPaysOff ? "This payment doesn't cover the interest — it won't pay off at this rate." : `Debt-free ${payoffDateLabel(base.months)} · ${money(base.totalInterest)} in interest left to pay`}</div>
@@ -1798,6 +1919,41 @@ function setupModalBackdropClose(){
       if (e.target === overlay) closeModal(overlay.id);
     });
   });
+}
+
+/* =========================================================
+   SWIPE NAVIGATION
+   Horizontal swipe moves between screens. Ignores vertical
+   scrolling, swipes that start on a form control, and any
+   swipe while a modal is open.
+   ========================================================= */
+const SCREEN_ORDER = ['calendar', 'budgets', 'debts'];
+function setupSwipeNavigation(){
+  const el = document.getElementById('content');
+  let startX = 0, startY = 0, tracking = false;
+  const MIN_DISTANCE = 60;
+
+  el.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { tracking = false; return; }
+    if (document.querySelector('.modal-overlay.show')) { tracking = false; return; }
+    if (e.target.closest('input, select, textarea, button, .check')) { tracking = false; return; }
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    tracking = true;
+  }, { passive: true });
+
+  el.addEventListener('touchend', (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) < MIN_DISTANCE) return;
+    if (Math.abs(dx) < Math.abs(dy) * 1.5) return; // mostly vertical — let it scroll
+    const idx = SCREEN_ORDER.indexOf(currentScreen);
+    const nextIdx = dx < 0 ? idx + 1 : idx - 1;
+    if (nextIdx < 0 || nextIdx >= SCREEN_ORDER.length) return;
+    switchScreen(SCREEN_ORDER[nextIdx]);
+  }, { passive: true });
 }
 
 /* =========================================================
@@ -1900,6 +2056,27 @@ function setCategoryDebtFields(debt){
   document.getElementById('debtCurrentBalance').value = debt ? debt.currentBalance : '';
   document.getElementById('debtApr').value = debt ? debt.apr : '';
   document.getElementById('debtMinPayment').value = debt ? debt.minimumPayment : '';
+  document.getElementById('debtGroup').value = debt && debt.group ? debt.group : '';
+  const autoOn = debt ? debt.autoApply !== false : true;
+  const autoEl = document.getElementById('debtAutoApplyCheck');
+  autoEl.classList.toggle('checked', autoOn);
+  autoEl.innerHTML = autoOn ? '✓' : '';
+  renderDebtGroupChips();
+}
+function renderDebtGroupChips(){
+  const el = document.getElementById('debtGroupChips');
+  if (!el) return;
+  const existing = getDebtGroupNames();
+  const suggestions = Array.from(new Set([...existing, 'Credit Cards', 'Loans'])).filter(Boolean).slice(0, 6);
+  el.innerHTML = suggestions.map(g =>
+    `<button type="button" class="icon-option" style="width:auto; padding:0 10px; font-size:calc(12/16*1rem);" onclick="document.getElementById('debtGroup').value='${escAttr(g)}'">${escHtml(g)}</button>`
+  ).join('');
+}
+function toggleDebtAutoApply(){
+  const el = document.getElementById('debtAutoApplyCheck');
+  const on = !el.classList.contains('checked');
+  el.classList.toggle('checked', on);
+  el.innerHTML = on ? '✓' : '';
 }
 function toggleCategoryDebtFields(){
   const checkEl = document.getElementById('categoryDebtCheck');
@@ -1962,7 +2139,13 @@ function saveCategory(){
       alert('Please fill in the debt details: original balance, current balance, APR, and minimum payment.');
       return;
     }
-    debt = { originalBalance: origBal, currentBalance: curBal, apr, minimumPayment: minPay };
+    const prior = editingCategory && categories[editingCategory] && categories[editingCategory].debt;
+    debt = {
+      originalBalance: origBal, currentBalance: curBal, apr, minimumPayment: minPay,
+      group: document.getElementById('debtGroup').value.trim() || 'Other debts',
+      autoApply: document.getElementById('debtAutoApplyCheck').classList.contains('checked'),
+      appliedPayments: (prior && Array.isArray(prior.appliedPayments)) ? prior.appliedPayments : []
+    };
   }
 
   pushUndoSnapshot();
@@ -2132,6 +2315,7 @@ function deleteTransaction(){
   if (!editingTransactionId) return;
   if (!confirm('Delete this transaction?')) return;
   pushUndoSnapshot();
+  unapplyAllForTransaction(editingTransactionId);
   transactions = transactions.filter(t => t.id !== editingTransactionId);
   persist();
   closeModal('transactionModal');
@@ -2830,6 +3014,7 @@ function handleImportFileSelect(event){
   document.getElementById('addFab').classList.toggle('show', currentScreen === 'calendar');
   updateUndoRedoButtons();
   setupModalBackdropClose();
+  setupSwipeNavigation();
   render();
   if (!saved) persist();
   const savedFbConfig = loadFirebaseConfigFromStorage();
