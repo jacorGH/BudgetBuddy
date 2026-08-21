@@ -174,6 +174,29 @@
   .pill{ flex:1; padding:9px 10px; border-radius:999px; border:1px solid var(--rule); background:var(--surface); color:var(--ink-muted); font-size:calc(13/16*1rem); font-weight:600; cursor:pointer; text-align:center; }
   .pill.active{ background:var(--period-color, var(--accent)); color:var(--accent-ink); border-color:var(--period-color, var(--accent)); }
   .hero-card{ background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow-card); position:relative; overflow:hidden; margin-bottom:18px; }
+
+  /* ---------- Debt payoff tab ---------- */
+  .debt-card{ background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-lg); padding:16px; margin-bottom:14px; box-shadow:var(--shadow-card); cursor:pointer; }
+  .debt-card-top{ display:flex; align-items:center; gap:14px; }
+  .tree-svg{ width:64px; height:64px; flex-shrink:0; }
+  .tree-svg-lg{ display:flex; justify-content:center; margin-bottom:6px; }
+  .tree-svg-lg svg{ width:110px; height:110px; }
+  .debt-info-main{ flex:1; min-width:0; }
+  .debt-name-row{ display:flex; align-items:baseline; gap:7px; }
+  .debt-name{ font-weight:700; font-size:calc(15/16*1rem); }
+  .debt-milestone{ font-size:calc(11/16*1rem); color:var(--ink-muted); margin-top:1px; }
+  .debt-balance{ font-family:var(--font-mono); font-size:calc(13/16*1rem); margin-top:5px; font-variant-numeric:tabular-nums; }
+  .debt-balance .remaining{ font-weight:600; color:var(--ink); }
+  .debt-balance .orig{ color:var(--ink-muted); }
+  .debt-progress-track{ height:6px; background:var(--paper); border:1px solid var(--rule); border-radius:999px; overflow:hidden; margin-top:8px; }
+  .debt-progress-fill{ height:100%; background:var(--good); transition:width .3s ease; }
+  .strategy-compare{ display:flex; gap:10px; }
+  .strategy-col{ flex:1; background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius-md); padding:14px; }
+  .strategy-col.winner{ border-color:var(--good); box-shadow:inset 0 0 0 1px var(--good); }
+  .strategy-title{ font-weight:700; font-size:calc(13.5/16*1rem); margin-bottom:2px; }
+  .strategy-sub{ font-size:calc(11/16*1rem); color:var(--ink-muted); margin-bottom:10px; }
+  .strategy-stat{ font-family:var(--font-mono); font-size:calc(12.5/16*1rem); margin-bottom:4px; }
+  .strategy-order{ font-size:calc(11.5/16*1rem); color:var(--ink-muted); margin-top:8px; line-height:1.5; }
   .hero-label{ font-size:calc(12/16*1rem); text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--ink-muted); }
   .hero-figure{ font-family:var(--font-mono); font-size:calc(34/16*1rem); font-weight:600; margin:6px 0 2px; font-variant-numeric:tabular-nums; }
   .hero-figure.good{ color:var(--good); } .hero-figure.warn{ color:var(--warn); } .hero-figure.bad{ color:var(--bad); }
@@ -304,6 +327,7 @@
     <div class="tabbar-inner">
       <button class="tab-btn active" data-screen="calendar" onclick="switchScreen('calendar')"><span class="tab-icon">📅</span>Calendar</button>
       <button class="tab-btn" data-screen="budgets" onclick="switchScreen('budgets')"><span class="tab-icon">🗂️</span>Budgets</button>
+      <button class="tab-btn" data-screen="debts" onclick="switchScreen('debts')"><span class="tab-icon">🌳</span>Debts</button>
     </div>
   </nav>
 </div>
@@ -401,6 +425,35 @@
       <div class="period-selector" id="categoryPeriodSelector"></div>
     </div>
     <div id="categoryBudgetFields"></div>
+    <div class="form-group">
+      <div class="check-row">
+        <div class="check" id="categoryDebtCheck" role="button" tabindex="0" onclick="toggleCategoryDebtFields()"></div>
+        <label>Track as a debt (mortgage, loan, credit card…)</label>
+      </div>
+    </div>
+    <div id="categoryDebtFields" style="display:none;">
+      <div class="row-2">
+        <div class="form-group">
+          <label class="form-label">Original balance</label>
+          <input type="number" class="form-input" id="debtOriginalBalance" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Current balance</label>
+          <input type="number" class="form-input" id="debtCurrentBalance" step="0.01">
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="form-group">
+          <label class="form-label">APR (%)</label>
+          <input type="number" class="form-input" id="debtApr" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lender's minimum payment</label>
+          <input type="number" class="form-input" id="debtMinPayment" step="0.01">
+        </div>
+      </div>
+      <div class="form-hint">The budget above is what you're actually paying each month — that's what payoff projections use. The minimum here is just for comparison, in case you're paying more than required.</div>
+    </div>
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="cancelCategoryModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveCategory()">Save</button>
@@ -656,6 +709,17 @@
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="closeModal('importModal')">Cancel</button>
       <button class="btn btn-primary" onclick="importFromJSON()">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Debt detail modal -->
+<div class="modal-overlay" id="debtDetailModal">
+  <div class="modal-box">
+    <div class="modal-title" id="debtDetailTitle">Debt</div>
+    <div id="debtDetailContent"></div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal('debtDetailModal')">Close</button>
     </div>
   </div>
 </div>
@@ -972,6 +1036,113 @@ function overallStatus(spent, budget){
 }
 
 /* =========================================================
+   DEBT PAYOFF TRACKER
+   A debt is just a category with an extra `debt` object attached
+   ({ originalBalance, currentBalance, apr, minimumPayment }).
+   The regular monthly payment is derived from the category's own
+   budget rather than duplicated — that's what "reuse categories"
+   means in practice. Balances are updated manually (matches your
+   real statement); APR + payment only drive the projections.
+   ========================================================= */
+function getDebtCategoryNames(){
+  return categoryOrder.filter(n => categories[n] && categories[n].debt);
+}
+function getMonthlyDebtPayment(catName){
+  const cat = categories[catName];
+  return cat.periods.reduce((sum, p) => sum + getCategoryBudget(cat, p), 0);
+}
+function getDebtPercent(debt){
+  if (!debt.originalBalance || debt.originalBalance <= 0) return 0;
+  const paid = debt.originalBalance - debt.currentBalance;
+  return Math.max(0, Math.min(100, (paid / debt.originalBalance) * 100));
+}
+function getDebtMilestoneLabel(percent){
+  if (percent >= 100) return '🎉 Debt-free!';
+  if (percent >= 75) return 'Almost there';
+  if (percent >= 50) return 'More than halfway';
+  if (percent >= 25) return 'Making progress';
+  if (percent > 0) return 'Just getting started';
+  return 'Just planted';
+}
+/* Simulates a single debt month-by-month with a fixed payment.
+   Returns null fields if the payment never covers the interest. */
+function simulatePayoff(balance, apr, monthlyPayment, extraPerMonth){
+  extraPerMonth = extraPerMonth || 0;
+  const rate = apr / 100 / 12;
+  const payment = monthlyPayment + extraPerMonth;
+  const MAX_MONTHS = 600;
+  if (balance <= 0) return { months: 0, totalInterest: 0, neverPaysOff: false };
+  if (payment <= balance * rate) return { months: null, totalInterest: null, neverPaysOff: true };
+  let months = 0, totalInterest = 0;
+  while (balance > 0 && months < MAX_MONTHS){
+    const interest = balance * rate;
+    totalInterest += interest;
+    balance = balance + interest - payment;
+    months++;
+  }
+  if (balance > 0) return { months: null, totalInterest: null, neverPaysOff: true };
+  return { months, totalInterest, neverPaysOff: false };
+}
+/* Simulates ALL debts together under a shared strategy: minimum
+   payments on everything, any extra budget goes to one target debt
+   at a time (smallest balance first for snowball, highest APR first
+   for avalanche); once a debt is cleared, its payment rolls into
+   the extra pool for the next target. */
+function simulateStrategy(debts, extraBudget, strategy){
+  const working = debts.map(d => ({ ...d }));
+  const order = strategy === 'snowball'
+    ? [...working].sort((a,b) => a.balance - b.balance)
+    : [...working].sort((a,b) => b.apr - a.apr);
+  const MAX_MONTHS = 600;
+  let months = 0, totalInterest = 0;
+  const payoffMonth = {};
+  while (order.some(d => d.balance > 0) && months < MAX_MONTHS){
+    months++;
+    order.forEach(d => {
+      if (d.balance <= 0) return;
+      const interest = d.balance * (d.apr / 100 / 12);
+      totalInterest += interest;
+      d.balance += interest;
+    });
+    const freedUp = extraBudget + order.filter(d => d.balance <= 0).reduce((s,d) => s + d.minPayment, 0);
+    const target = order.find(d => d.balance > 0);
+    order.forEach(d => {
+      if (d.balance <= 0) return;
+      let pay = d.minPayment + (d === target ? freedUp : 0);
+      pay = Math.min(pay, d.balance);
+      d.balance -= pay;
+      if (d.balance <= 0 && !(d.name in payoffMonth)) payoffMonth[d.name] = months;
+    });
+  }
+  const allPaidOff = order.every(d => d.balance <= 0);
+  return { months: allPaidOff ? months : null, totalInterest: allPaidOff ? totalInterest : null, payoffMonth, allPaidOff };
+}
+const TREE_LEAVES = [
+  {x:50, y:38, r:9, at:8}, {x:42, y:42, r:7, at:16}, {x:58, y:42, r:7, at:16},
+  {x:36, y:50, r:6, at:28}, {x:64, y:50, r:6, at:28}, {x:50, y:30, r:8, at:38},
+  {x:30, y:58, r:6, at:48}, {x:70, y:58, r:6, at:48}, {x:44, y:26, r:6, at:58},
+  {x:56, y:26, r:6, at:58}, {x:50, y:48, r:10, at:72}, {x:38, y:36, r:5, at:86},
+  {x:62, y:36, r:5, at:86}, {x:50, y:20, r:6, at:96}
+];
+function renderTreeSVG(percent){
+  const p = Math.max(0, Math.min(100, percent));
+  const trunkHeight = 4 + p * 0.32;
+  const trunkTopY = 82 - trunkHeight;
+  const leaves = TREE_LEAVES.filter(l => p >= l.at)
+    .map(l => `<circle cx="${l.x}" cy="${l.y}" r="${l.r}" fill="var(--good)" opacity="0.9"/>`).join('');
+  return `
+    <svg viewBox="0 0 100 100" class="tree-svg">
+      <ellipse cx="50" cy="85" rx="20" ry="3.5" fill="var(--rule)"/>
+      ${p >= 4
+        ? `<rect x="47" y="${trunkTopY}" width="6" height="${trunkHeight}" rx="2.5" fill="#8B5E3C"/>`
+        : `<circle cx="50" cy="80" r="3" fill="#8B5E3C"/>`}
+      ${leaves}
+      ${p >= 100 ? `<text x="78" y="18" font-size="16" text-anchor="middle">🎉</text>` : ''}
+    </svg>
+  `;
+}
+
+/* =========================================================
    HELPERS: transactions & cash flow
    ========================================================= */
 function getTransactionsForDay(day){
@@ -1113,7 +1284,8 @@ function render(){
   const content = document.getElementById('content');
   content.innerHTML = '';
   if (currentScreen === 'calendar') renderCalendarScreen(content);
-  else renderBudgetsScreen(content);
+  else if (currentScreen === 'budgets') renderBudgetsScreen(content);
+  else renderDebtsScreen(content);
 }
 
 /* =========================================================
@@ -1419,6 +1591,203 @@ function moveCategory(catName, direction, period){
 }
 
 /* =========================================================
+   RENDER: DEBTS SCREEN
+   ========================================================= */
+function payoffDateLabel(months){
+  if (months == null) return "won't pay off at this rate";
+  const d = new Date(today.getFullYear(), today.getMonth() + months, 1);
+  return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+}
+function renderDebtsScreen(content){
+  const debtNames = getDebtCategoryNames();
+  const wrap = document.createElement('div');
+
+  if (debtNames.length === 0){
+    wrap.innerHTML = `
+      <div class="hero-card">
+        <div class="hero-label">Debt payoff tracker</div>
+        <div class="empty-note" style="padding-top:8px;">No debts tracked yet. Edit a category on the Budgets tab — something like a mortgage or car payment — and turn on "Track as a debt" to see it grow here.</div>
+      </div>
+    `;
+    content.appendChild(wrap);
+    return;
+  }
+
+  const totalRemaining = debtNames.reduce((s,n) => s + categories[n].debt.currentBalance, 0);
+  const totalOriginal = debtNames.reduce((s,n) => s + categories[n].debt.originalBalance, 0);
+  const overallPct = totalOriginal > 0 ? ((totalOriginal - totalRemaining) / totalOriginal) * 100 : 0;
+  const nowDays = daysInMonth(today.getFullYear(), today.getMonth());
+  const nowBalances = computeMonthlyBalances(nowDays);
+  const projectedExtra = Math.max(0, nowBalances[nowDays]);
+
+  wrap.innerHTML = `
+    <div class="stat-strip">
+      <div class="stat-chip">
+        <div class="stat-chip-label">Total remaining</div>
+        <div class="stat-chip-value">${money(totalRemaining)}</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-chip-label">Paid off</div>
+        <div class="stat-chip-value good">${overallPct.toFixed(0)}%</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-chip-label">Could apply this month</div>
+        <div class="stat-chip-value ${projectedExtra > 0 ? 'good' : ''}">${money(projectedExtra)}</div>
+      </div>
+    </div>
+    <div class="section-title">Your debts</div>
+    <div id="debtCardList"></div>
+  `;
+  content.appendChild(wrap);
+
+  const listEl = wrap.querySelector('#debtCardList');
+  debtNames.forEach(name => {
+    const debt = categories[name].debt;
+    const percent = getDebtPercent(debt);
+    const card = document.createElement('div');
+    card.className = 'debt-card';
+    card.innerHTML = `
+      <div class="debt-card-top">
+        ${renderTreeSVG(percent)}
+        <div class="debt-info-main">
+          <div class="debt-name-row">
+            <div class="icon-badge sm">${getCategoryIcon(name)}</div>
+            <div class="debt-name">${escHtml(name)}</div>
+          </div>
+          <div class="debt-milestone">${getDebtMilestoneLabel(percent)} · ${percent.toFixed(0)}% paid off</div>
+          <div class="debt-balance"><span class="remaining">${money(debt.currentBalance)}</span> <span class="orig">of ${money(debt.originalBalance)}</span></div>
+          <div class="debt-progress-track"><div class="debt-progress-fill" style="width:${percent}%"></div></div>
+        </div>
+      </div>
+    `;
+    card.addEventListener('click', () => openDebtDetail(name));
+    listEl.appendChild(card);
+  });
+
+  if (debtNames.length >= 2){
+    const compareSection = document.createElement('div');
+    compareSection.innerHTML = `
+      <div class="section-title">Compare payoff strategies</div>
+      <div class="form-group">
+        <label class="form-label">Extra to put toward debt each month</label>
+        <input type="number" class="form-input" id="debtExtraInput" value="${Math.round(projectedExtra)}" step="10" min="0" oninput="renderStrategyComparison()">
+        <div class="form-hint">Defaults to what's projected left over this month on your Calendar tab — adjust to try other amounts.</div>
+      </div>
+      <div class="strategy-compare" id="strategyCompare"></div>
+    `;
+    content.appendChild(compareSection);
+    renderStrategyComparison();
+  }
+}
+function getDebtSimInputs(){
+  return getDebtCategoryNames().map(name => ({
+    name, balance: categories[name].debt.currentBalance, apr: categories[name].debt.apr,
+    minPayment: getMonthlyDebtPayment(name)
+  }));
+}
+function renderStrategyComparison(){
+  const el = document.getElementById('strategyCompare');
+  if (!el) return;
+  const extra = Math.max(0, parseFloat(document.getElementById('debtExtraInput').value) || 0);
+  const debts = getDebtSimInputs();
+  const snow = simulateStrategy(debts, extra, 'snowball');
+  const ava = simulateStrategy(debts, extra, 'avalanche');
+  const snowWins = snow.allPaidOff && ava.allPaidOff && snow.totalInterest < ava.totalInterest;
+  const avaWins = snow.allPaidOff && ava.allPaidOff && ava.totalInterest < snow.totalInterest;
+
+  const order = (result, debts) => debts.slice()
+    .sort((a,b) => a.name === b.name ? 0 : ((result.payoffMonth[a.name] || 9999) - (result.payoffMonth[b.name] || 9999)))
+    .map(d => d.name).join(' → ');
+
+  el.innerHTML = `
+    <div class="strategy-col ${snowWins ? 'winner' : ''}">
+      <div class="strategy-title">❄️ Snowball</div>
+      <div class="strategy-sub">Smallest balance first</div>
+      <div class="strategy-stat">${snow.allPaidOff ? `Debt-free: ${payoffDateLabel(snow.months)}` : "Won't clear at this rate"}</div>
+      <div class="strategy-stat">${snow.allPaidOff ? `Total interest: ${money(snow.totalInterest)}` : ''}</div>
+      <div class="strategy-order">${order(snow, debts)}</div>
+    </div>
+    <div class="strategy-col ${avaWins ? 'winner' : ''}">
+      <div class="strategy-title">🏔️ Avalanche</div>
+      <div class="strategy-sub">Highest interest first</div>
+      <div class="strategy-stat">${ava.allPaidOff ? `Debt-free: ${payoffDateLabel(ava.months)}` : "Won't clear at this rate"}</div>
+      <div class="strategy-stat">${ava.allPaidOff ? `Total interest: ${money(ava.totalInterest)}` : ''}</div>
+      <div class="strategy-order">${order(ava, debts)}</div>
+    </div>
+  `;
+}
+
+let debtDetailCatName = null;
+function openDebtDetail(catName){
+  debtDetailCatName = catName;
+  document.getElementById('debtDetailTitle').textContent = catName;
+  renderDebtDetailContent();
+  showModal('debtDetailModal');
+}
+function renderDebtDetailContent(){
+  const el = document.getElementById('debtDetailContent');
+  if (!el || !debtDetailCatName) return;
+  const cat = categories[debtDetailCatName];
+  if (!cat || !cat.debt){ closeModal('debtDetailModal'); return; }
+  const debt = cat.debt;
+  const percent = getDebtPercent(debt);
+  const payment = getMonthlyDebtPayment(debtDetailCatName);
+  const extraInputEl = document.getElementById('debtDetailExtraInput');
+  const extra = extraInputEl ? (Math.max(0, parseFloat(extraInputEl.value)) || 0) : 0;
+  const base = simulatePayoff(debt.currentBalance, debt.apr, payment, 0);
+  const withExtra = simulatePayoff(debt.currentBalance, debt.apr, payment, extra);
+
+  el.innerHTML = `
+    <div class="tree-svg-lg">${renderTreeSVG(percent)}</div>
+    <div style="text-align:center; font-size:calc(13/16*1rem); color:var(--ink-muted); margin-bottom:14px;">${getDebtMilestoneLabel(percent)} · ${percent.toFixed(1)}% paid off</div>
+
+    <div class="row-2">
+      <div class="form-group">
+        <label class="form-label">Current balance</label>
+        <input type="number" class="form-input" id="debtDetailBalanceInput" value="${debt.currentBalance}" step="0.01">
+      </div>
+      <div class="form-group" style="display:flex; align-items:flex-end;">
+        <button class="btn btn-secondary" style="width:100%;" onclick="saveDebtBalanceUpdate()">Update</button>
+      </div>
+    </div>
+
+    <div class="due-row" style="cursor:default; margin-bottom:8px;">
+      <div class="due-info"><div class="due-name">Original balance</div></div>
+      <div class="due-amount">${money(debt.originalBalance)}</div>
+    </div>
+    <div class="due-row" style="cursor:default; margin-bottom:8px;">
+      <div class="due-info"><div class="due-name">APR</div></div>
+      <div class="due-amount">${debt.apr}%</div>
+    </div>
+    <div class="due-row" style="cursor:default; margin-bottom:14px;">
+      <div class="due-info"><div class="due-name">Monthly payment (from budget)</div></div>
+      <div class="due-amount">${money(payment)}</div>
+    </div>
+
+    <div class="section-title" style="margin-top:0;">At this pace</div>
+    <div class="hero-sub">${base.neverPaysOff ? "This payment doesn't cover the interest — it won't pay off at this rate." : `Debt-free ${payoffDateLabel(base.months)} · ${money(base.totalInterest)} in interest left to pay`}</div>
+
+    <div class="section-title">What if you paid extra?</div>
+    <div class="form-group">
+      <label class="form-label">Extra per month</label>
+      <input type="number" class="form-input" id="debtDetailExtraInput" value="${extra}" step="10" min="0" oninput="renderDebtDetailContent()">
+    </div>
+    <div class="hero-sub">${withExtra.neverPaysOff ? 'Still not enough to cover the interest at that amount.' : `Debt-free ${payoffDateLabel(withExtra.months)}${!base.neverPaysOff ? ` · ${base.months - withExtra.months} month(s) sooner, ${money(base.totalInterest - withExtra.totalInterest)} saved in interest` : ''}`}</div>
+
+    <button class="btn btn-secondary" style="width:100%; margin-top:16px;" onclick="closeModal('debtDetailModal'); editCategory('${escAttr(debtDetailCatName)}')">Edit debt details</button>
+  `;
+}
+function saveDebtBalanceUpdate(){
+  const val = parseFloat(document.getElementById('debtDetailBalanceInput').value);
+  if (isNaN(val) || val < 0){ alert('Enter a valid balance.'); return; }
+  pushUndoSnapshot();
+  categories[debtDetailCatName].debt.currentBalance = val;
+  persist();
+  renderDebtDetailContent();
+  if (currentScreen === 'debts') render();
+}
+
+/* =========================================================
    MODAL HELPERS
    ========================================================= */
 function showModal(id){ document.getElementById(id).classList.add('show'); }
@@ -1503,6 +1872,7 @@ function addCategory(){
   renderCategoryPeriodSelector();
   renderCategoryBudgetFields();
   setIconState('🧾');
+  setCategoryDebtFields(null);
   showModal('categoryModal');
 }
 
@@ -1516,7 +1886,27 @@ function editCategory(catName){
   renderCategoryPeriodSelector();
   renderCategoryBudgetFields(category.budget);
   setIconState(category.icon);
+  setCategoryDebtFields(category.debt || null);
   showModal('categoryModal');
+}
+function setCategoryDebtFields(debt){
+  const checkEl = document.getElementById('categoryDebtCheck');
+  const fieldsEl = document.getElementById('categoryDebtFields');
+  const on = !!debt;
+  checkEl.classList.toggle('checked', on);
+  checkEl.innerHTML = on ? '✓' : '';
+  fieldsEl.style.display = on ? '' : 'none';
+  document.getElementById('debtOriginalBalance').value = debt ? debt.originalBalance : '';
+  document.getElementById('debtCurrentBalance').value = debt ? debt.currentBalance : '';
+  document.getElementById('debtApr').value = debt ? debt.apr : '';
+  document.getElementById('debtMinPayment').value = debt ? debt.minimumPayment : '';
+}
+function toggleCategoryDebtFields(){
+  const checkEl = document.getElementById('categoryDebtCheck');
+  const on = !checkEl.classList.contains('checked');
+  checkEl.classList.toggle('checked', on);
+  checkEl.innerHTML = on ? '✓' : '';
+  document.getElementById('categoryDebtFields').style.display = on ? '' : 'none';
 }
 
 function deleteCategoryPrompt(catName){
@@ -1562,6 +1952,19 @@ function saveCategory(){
     return;
   }
 
+  let debt = null;
+  if (document.getElementById('categoryDebtCheck').classList.contains('checked')){
+    const origBal = parseFloat(document.getElementById('debtOriginalBalance').value);
+    const curBal = parseFloat(document.getElementById('debtCurrentBalance').value);
+    const apr = parseFloat(document.getElementById('debtApr').value);
+    const minPay = parseFloat(document.getElementById('debtMinPayment').value);
+    if (!origBal || origBal <= 0 || isNaN(curBal) || curBal < 0 || isNaN(apr) || apr < 0 || !minPay || minPay <= 0){
+      alert('Please fill in the debt details: original balance, current balance, APR, and minimum payment.');
+      return;
+    }
+    debt = { originalBalance: origBal, currentBalance: curBal, apr, minimumPayment: minPay };
+  }
+
   pushUndoSnapshot();
   const distinctValues = new Set(Object.values(values));
   let budget;
@@ -1583,6 +1986,7 @@ function saveCategory(){
     categoryOrder.push(name);
   }
   categories[name] = { icon, periods: selectedCategoryPeriods, budget };
+  if (debt) categories[name].debt = debt;
   persist();
   closeModal('categoryModal');
 
